@@ -5,10 +5,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { WalletProvider } from "@/contexts/WalletContext";
+import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Feed from "./pages/Feed";
 import Threads from "./pages/Threads";
 import ThreadDetail from "./pages/ThreadDetail";
+import PostDetail from "./pages/PostDetail";
 import Earn from "./pages/Earn";
 import Rewards from "./pages/Rewards";
 import Groups from "./pages/Groups";
@@ -17,6 +19,7 @@ import Organizations from "./pages/Organizations";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import Notifications from "./pages/Notifications";
+import Following from "./pages/Following";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,9 +51,10 @@ const App = () => (
         <AuthProvider>
           <WalletProvider>
             <Routes>
+              <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route
-                path="/"
+                path="/feed"
                 element={
                   <ProtectedRoute>
                     <Feed />
@@ -70,6 +74,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <ThreadDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/posts/:id"
+                element={
+                  <ProtectedRoute>
+                    <PostDetail />
                   </ProtectedRoute>
                 }
               />
@@ -134,6 +146,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Notifications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/following"
+              element={
+                <ProtectedRoute>
+                  <Following />
                 </ProtectedRoute>
               }
             />
