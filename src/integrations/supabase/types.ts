@@ -396,6 +396,7 @@ export type Database = {
           created_at: string | null
           id: string
           image_url: string | null
+          image_urls: string[] | null
           is_hidden: boolean | null
           likes_count: number | null
           privacy: Database["public"]["Enums"]["post_privacy"] | null
@@ -408,6 +409,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           image_url?: string | null
+          image_urls?: string[] | null
           is_hidden?: boolean | null
           likes_count?: number | null
           privacy?: Database["public"]["Enums"]["post_privacy"] | null
@@ -420,6 +422,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           image_url?: string | null
+          image_urls?: string[] | null
           is_hidden?: boolean | null
           likes_count?: number | null
           privacy?: Database["public"]["Enums"]["post_privacy"] | null

@@ -51,13 +51,17 @@ export default function Threads() {
       .from('threads')
       .select(`
         *,
-        profiles!threads_user_id_fkey(display_name, avatar_url)
+        profiles(display_name, avatar_url)
       `)
       .order('created_at', { ascending: false });
 
-    if (!error) {
-      setThreads(data as any || []);
+    if (error) {
+      console.error('Error fetching threads:', error);
+      toast({ title: 'Error fetching threads', description: error.message, variant: 'destructive' });
+      return;
     }
+
+    setThreads(data as any || []);
   };
 
   const createThread = async () => {

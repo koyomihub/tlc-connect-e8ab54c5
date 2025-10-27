@@ -15,6 +15,7 @@ interface Post {
   id: string;
   content: string;
   image_url: string | null;
+  image_urls: string[] | null;
   likes_count: number;
   comments_count: number;
   created_at: string;
@@ -31,30 +32,46 @@ export default function Feed() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [newPost, setNewPost] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
+  const [userProfile, setUserProfile] = useState<{ avatar_url?: string; display_name?: string } | null>(null);
 
   useEffect(() => {
     if (user) {
       fetchPosts();
       fetchLikedPosts();
+      fetchUserProfile();
     }
   }, [user]);
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('profiles')
+      .select('avatar_url, display_name')
+      .eq('id', user.id)
+      .single();
+    
+    if (data) {
+      setUserProfile(data);
+    }
+  };
 
   const fetchPosts = async () => {
     const { data, error } = await supabase
       .from('posts')
       .select(`
         *,
-        profiles!posts_user_id_fkey (display_name, avatar_url)
+        profiles (display_name, avatar_url)
       `)
       .eq('is_hidden', false)
       .order('created_at', { ascending: false });
 
     if (error) {
-      toast({ title: 'Error fetching posts', variant: 'destructive' });
+      console.error('Error fetching posts:', error);
+      toast({ title: 'Error fetching posts', description: error.message, variant: 'destructive' });
       return;
     }
 
@@ -74,36 +91,41 @@ export default function Feed() {
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setImageFiles(prev => [...prev, ...files]);
+      const newPreviews = files.map(file => URL.createObjectURL(file));
+      setImagePreviews(prev => [...prev, ...newPreviews]);
     }
   };
 
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
+  const removeImage = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const uploadImage = async () => {
-    if (!imageFile || !user) return null;
+  const uploadImages = async () => {
+    if (imageFiles.length === 0 || !user) return [];
 
-    const fileExt = imageFile.name.split('.').pop();
-    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+    const uploadPromises = imageFiles.map(async (file) => {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}-${Math.random()}.${fileExt}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('posts')
-      .upload(fileName, imageFile);
+      const { error: uploadError } = await supabase.storage
+        .from('posts')
+        .upload(fileName, file);
 
-    if (uploadError) throw uploadError;
+      if (uploadError) throw uploadError;
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('posts')
-      .getPublicUrl(fileName);
+      const { data: { publicUrl } } = supabase.storage
+        .from('posts')
+        .getPublicUrl(fileName);
 
-    return publicUrl;
+      return publicUrl;
+    });
+
+    return await Promise.all(uploadPromises);
   };
 
   const createPost = async () => {
@@ -111,9 +133,9 @@ export default function Feed() {
 
     setUploading(true);
     try {
-      let imageUrl = null;
-      if (imageFile) {
-        imageUrl = await uploadImage();
+      let imageUrls: string[] = [];
+      if (imageFiles.length > 0) {
+        imageUrls = await uploadImages();
       }
 
       const { error } = await supabase
@@ -121,16 +143,20 @@ export default function Feed() {
         .insert({
           user_id: user.id,
           content: newPost.trim(),
-          image_url: imageUrl,
+          image_url: imageUrls[0] || null, // Keep backward compatibility
+          image_urls: imageUrls,
         });
 
       if (error) throw error;
 
       setNewPost('');
-      removeImage();
+      setImageFiles([]);
+      setImagePreviews([]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       fetchPosts();
       toast({ title: 'Post created!', description: 'Your post has been shared' });
     } catch (error: any) {
+      console.error('Error creating post:', error);
       toast({ title: 'Error creating post', description: error.message, variant: 'destructive' });
     } finally {
       setUploading(false);
@@ -171,8 +197,9 @@ export default function Feed() {
         <Card className="p-6 mb-6">
           <div className="flex items-start space-x-3">
             <Avatar>
+              <AvatarImage src={userProfile?.avatar_url} />
               <AvatarFallback>
-                {user?.email?.[0]?.toUpperCase() || 'U'}
+                {userProfile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 space-y-3">
@@ -183,17 +210,21 @@ export default function Feed() {
                 className="min-h-[100px]"
               />
               
-              {imagePreview && (
-                <div className="relative">
-                  <img src={imagePreview} alt="Preview" className="rounded-lg max-h-64 w-full object-cover" />
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                    onClick={removeImage}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+              {imagePreviews.length > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative">
+                      <img src={preview} alt={`Preview ${index + 1}`} className="rounded-lg max-h-48 w-full object-cover" />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => removeImage(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -202,6 +233,7 @@ export default function Feed() {
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   className="hidden"
                   onChange={handleImageSelect}
                 />
@@ -212,9 +244,9 @@ export default function Feed() {
                   disabled={uploading}
                 >
                   <ImageIcon className="mr-2 h-4 w-4" />
-                  Add Image
+                  Add Images
                 </Button>
-                <Button onClick={createPost} disabled={!newPost.trim() || uploading}>
+                <Button onClick={createPost} disabled={!newPost.trim() || uploading} className="ml-auto">
                   <Send className="mr-2 h-4 w-4" />
                   {uploading ? 'Posting...' : 'Post'}
                 </Button>
@@ -245,14 +277,26 @@ export default function Feed() {
 
               <p className="mb-4 whitespace-pre-wrap">{post.content}</p>
 
-              {post.image_url && (
+              {post.image_urls && post.image_urls.length > 0 ? (
+                <div className={`grid gap-2 mb-4 ${post.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                  {post.image_urls.map((url: string, index: number) => (
+                    <img
+                      key={index}
+                      src={url}
+                      alt={`Post image ${index + 1}`}
+                      className="w-full rounded-lg max-h-[400px] object-cover cursor-pointer"
+                      onClick={() => navigate(`/posts/${post.id}`)}
+                    />
+                  ))}
+                </div>
+              ) : post.image_url ? (
                 <img
                   src={post.image_url}
                   alt="Post"
                   className="w-full rounded-lg mb-4 max-h-[500px] object-cover cursor-pointer"
                   onClick={() => navigate(`/posts/${post.id}`)}
                 />
-              )}
+              ) : null}
 
               <div className="flex items-center space-x-4 pt-4 border-t">
                 <Button
