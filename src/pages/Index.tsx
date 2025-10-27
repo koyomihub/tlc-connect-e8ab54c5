@@ -1,7 +1,7 @@
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Users, MessageSquare, Gift, Award, TrendingUp, Shield } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Users, MessageSquare, Gift, Award, TrendingUp, Shield } from "lucide-react";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -12,17 +12,17 @@ export default function Index() {
       <div className="container mx-auto px-4 py-20">
         <div className="text-center space-y-6 max-w-3xl mx-auto">
           <h1 className="text-5xl md:text-6xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Welcome to EduConnect
+            Welcome to TLC-Connect
           </h1>
           <p className="text-xl text-muted-foreground">
-            The blockchain-powered social platform for students, teachers, and organizations.
-            Connect, learn, and earn rewards together.
+            The blockchain-powered social platform for students, teachers, and organizations. Connect, learn, and earn
+            rewards together.
           </p>
           <div className="flex items-center justify-center space-x-4 pt-6">
-            <Button size="lg" onClick={() => navigate('/auth')}>
+            <Button size="lg" onClick={() => navigate("/auth")}>
               Get Started
             </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate('/auth')}>
+            <Button size="lg" variant="outline" onClick={() => navigate("/auth")}>
               Learn More
             </Button>
           </div>
@@ -58,9 +58,7 @@ export default function Index() {
               <Gift className="h-6 w-6 text-primary" />
             </div>
             <h3 className="text-xl font-semibold">Token Rewards</h3>
-            <p className="text-muted-foreground">
-              Earn tokens for participation and engagement on the platform.
-            </p>
+            <p className="text-muted-foreground">Earn tokens for participation and engagement on the platform.</p>
           </Card>
 
           <Card className="p-6 space-y-4 hover:shadow-elegant transition-shadow">
@@ -78,9 +76,7 @@ export default function Index() {
               <TrendingUp className="h-6 w-6 text-primary" />
             </div>
             <h3 className="text-xl font-semibold">Blockchain Integration</h3>
-            <p className="text-muted-foreground">
-              Connect your Web3 wallet and experience true digital ownership.
-            </p>
+            <p className="text-muted-foreground">Connect your Web3 wallet and experience true digital ownership.</p>
           </Card>
 
           <Card className="p-6 space-y-4 hover:shadow-elegant transition-shadow">
@@ -98,13 +94,11 @@ export default function Index() {
       {/* CTA Section */}
       <div className="container mx-auto px-4 py-16">
         <Card className="p-12 text-center bg-gradient-primary">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Ready to Join the Community?
-          </h2>
+          <h2 className="text-3xl font-bold text-white mb-4">Ready to Join the Community?</h2>
           <p className="text-white/90 mb-8 max-w-2xl mx-auto">
             Create your account today and start connecting with thousands of students and educators.
           </p>
-          <Button size="lg" variant="secondary" onClick={() => navigate('/auth')}>
+          <Button size="lg" variant="secondary" onClick={() => navigate("/auth")}>
             Sign Up Now
           </Button>
         </Card>
