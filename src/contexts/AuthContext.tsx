@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "Welcome to TLC Connect. You can now start exploring.",
       });
       
-      navigate('/');
+      navigate('/feed');
     } catch (error: any) {
       toast({
         title: "Sign up failed",
@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "You've successfully signed in.",
       });
       
-      navigate('/');
+      navigate('/feed');
     } catch (error: any) {
       toast({
         title: "Sign in failed",
