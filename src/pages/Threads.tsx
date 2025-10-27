@@ -51,7 +51,7 @@ export default function Threads() {
       .from('threads')
       .select(`
         *,
-        profiles(display_name, avatar_url)
+        profiles!threads_user_id_fkey (display_name, avatar_url)
       `)
       .order('created_at', { ascending: false });
 

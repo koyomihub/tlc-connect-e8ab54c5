@@ -16,6 +16,9 @@ export default function Profile() {
   const [profile, setProfile] = useState<any>(null);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [userThreads, setUserThreads] = useState<any[]>([]);
+  const [userGroups, setUserGroups] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     display_name: '',
     bio: '',
@@ -23,7 +26,10 @@ export default function Profile() {
   });
 
   useEffect(() => {
-    fetchProfile();
+    if (user) {
+      fetchProfile();
+      fetchUserStats();
+    }
   }, [user]);
 
   const fetchProfile = async () => {
@@ -43,6 +49,32 @@ export default function Profile() {
         wallet_address: data.wallet_address || '',
       });
     }
+  };
+
+  const fetchUserStats = async () => {
+    if (!user) return;
+
+    // Fetch posts
+    const { data: posts } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_hidden', false);
+    setUserPosts(posts || []);
+
+    // Fetch threads
+    const { data: threads } = await supabase
+      .from('threads')
+      .select('*')
+      .eq('user_id', user.id);
+    setUserThreads(threads || []);
+
+    // Fetch groups
+    const { data: memberGroups } = await supabase
+      .from('group_members')
+      .select('group_id')
+      .eq('user_id', user.id);
+    setUserGroups(memberGroups || []);
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'cover') => {
@@ -76,12 +108,16 @@ export default function Profile() {
 
       if (updateError) throw updateError;
 
+      // Update local state immediately for instant UI update
+      setProfile((prev: any) => ({
+        ...prev,
+        [updateField]: publicUrl,
+      }));
+
       toast({
         title: "Upload successful!",
         description: `Your ${type} has been updated`,
       });
-
-      fetchProfile();
     } catch (error: any) {
       toast({
         title: "Upload failed",
@@ -127,15 +163,20 @@ export default function Profile() {
         {/* Cover Photo */}
         <Card className="overflow-hidden">
           <div className="relative h-48 bg-gradient-primary group">
-            {profile?.cover_photo_url && (
+            {profile?.cover_photo_url ? (
               <img
                 src={profile.cover_photo_url}
                 alt="Cover"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-center"
               />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-r from-primary/20 to-primary/10" />
             )}
             <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-              <Camera className="h-8 w-8 text-white" />
+              <div className="text-center text-white">
+                <Camera className="h-8 w-8 mx-auto mb-2" />
+                <p className="text-sm">Click to upload cover photo</p>
+              </div>
               <input
                 type="file"
                 accept="image/*"
@@ -242,7 +283,7 @@ export default function Profile() {
               <h3 className="font-semibold">Posts</h3>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">0</p>
+              <p className="text-3xl font-bold">{userPosts.length}</p>
             </CardContent>
           </Card>
           <Card>
@@ -250,7 +291,7 @@ export default function Profile() {
               <h3 className="font-semibold">Threads</h3>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">0</p>
+              <p className="text-3xl font-bold">{userThreads.length}</p>
             </CardContent>
           </Card>
           <Card>
@@ -258,10 +299,33 @@ export default function Profile() {
               <h3 className="font-semibold">Groups</h3>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">0</p>
+              <p className="text-3xl font-bold">{userGroups.length}</p>
             </CardContent>
           </Card>
         </div>
+
+        {/* User Posts */}
+        {userPosts.length > 0 && (
+          <Card>
+            <CardHeader>
+              <h3 className="text-xl font-semibold">Recent Posts</h3>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {userPosts.slice(0, 5).map((post) => (
+                <div key={post.id} className="border-b last:border-0 pb-4 last:pb-0">
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(post.created_at).toLocaleDateString()}
+                  </p>
+                  <p className="mt-1">{post.content}</p>
+                  <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
+                    <span>{post.likes_count} likes</span>
+                    <span>{post.comments_count} comments</span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </MainLayout>
   );

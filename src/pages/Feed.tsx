@@ -64,7 +64,7 @@ export default function Feed() {
       .from('posts')
       .select(`
         *,
-        profiles (display_name, avatar_url)
+        profiles!posts_user_id_fkey (display_name, avatar_url)
       `)
       .eq('is_hidden', false)
       .order('created_at', { ascending: false });
