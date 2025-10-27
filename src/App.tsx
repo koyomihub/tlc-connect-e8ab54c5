@@ -19,7 +19,7 @@ import Organizations from "./pages/Organizations";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import Notifications from "./pages/Notifications";
-import Following from "./pages/Following";
+import People from "./pages/People";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -150,10 +150,18 @@ const App = () => (
               }
             />
             <Route
-              path="/following"
+              path="/people"
               element={
                 <ProtectedRoute>
-                  <Following />
+                  <People />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile/:userId"
+              element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               }
             />

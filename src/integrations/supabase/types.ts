@@ -111,6 +111,7 @@ export type Database = {
           image_url: string | null
           members_count: number | null
           name: string
+          privacy: string | null
           updated_at: string | null
         }
         Insert: {
@@ -121,6 +122,7 @@ export type Database = {
           image_url?: string | null
           members_count?: number | null
           name: string
+          privacy?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -131,6 +133,7 @@ export type Database = {
           image_url?: string | null
           members_count?: number | null
           name?: string
+          privacy?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -628,6 +631,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_follower_count: { Args: { profile_id: string }; Returns: number }
+      get_following_count: { Args: { profile_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

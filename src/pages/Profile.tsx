@@ -53,7 +53,7 @@ export default function Profile() {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user?.id}-${type}-${Math.random()}.${fileExt}`;
-      const filePath = `${type}s/${fileName}`;
+      const filePath = `${user?.id}/${type}s/${fileName}`;
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
@@ -180,6 +180,11 @@ export default function Profile() {
                 <>
                   <h1 className="text-3xl font-bold">{profile?.display_name || 'Unknown User'}</h1>
                   <p className="text-muted-foreground">{profile?.bio || 'No bio yet'}</p>
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground mt-2">
+                    <span className="font-medium">{profile?.follower_count || 0} followers</span>
+                    <span>•</span>
+                    <span className="font-medium">{profile?.following_count || 0} following</span>
+                  </div>
                   
                   <div className="flex items-center space-x-6 pt-4">
                     <div className="flex items-center space-x-2">

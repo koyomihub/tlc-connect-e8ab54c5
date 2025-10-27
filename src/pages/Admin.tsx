@@ -21,6 +21,9 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<any[]>([]);
   const [organizations, setOrganizations] = useState<any[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [threads, setThreads] = useState<any[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
   const [newOrg, setNewOrg] = useState({ name: '', description: '' });
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string>('');
@@ -53,6 +56,9 @@ export default function Admin() {
     setLoading(false);
     fetchUsers();
     fetchOrganizations();
+    fetchPosts();
+    fetchThreads();
+    fetchGroups();
   };
 
   const fetchUsers = async () => {
@@ -77,6 +83,39 @@ export default function Admin() {
     setOrganizations(data || []);
   };
 
+  const fetchPosts = async () => {
+    const { data } = await supabase
+      .from('posts')
+      .select(`
+        *,
+        profiles!posts_user_id_fkey(display_name)
+      `)
+      .order('created_at', { ascending: false });
+
+    setPosts(data || []);
+  };
+
+  const fetchThreads = async () => {
+    const { data } = await supabase
+      .from('threads')
+      .select(`
+        *,
+        profiles!threads_user_id_fkey(display_name)
+      `)
+      .order('created_at', { ascending: false });
+
+    setThreads(data || []);
+  };
+
+  const fetchGroups = async () => {
+    const { data } = await supabase
+      .from('groups')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    setGroups(data || []);
+  };
+
   const assignRole = async () => {
     if (!selectedUser || !selectedRole) {
       toast({
@@ -87,6 +126,13 @@ export default function Admin() {
       return;
     }
 
+    // Delete existing role
+    await supabase
+      .from('user_roles')
+      .delete()
+      .eq('user_id', selectedUser);
+
+    // Insert new role
     const { error } = await supabase
       .from('user_roles')
       .insert([{
@@ -163,6 +209,60 @@ export default function Admin() {
     }
   };
 
+  const deletePost = async (postId: string) => {
+    const { error } = await supabase
+      .from('posts')
+      .delete()
+      .eq('id', postId);
+
+    if (error) {
+      toast({
+        title: 'Error deleting post',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Post deleted' });
+      fetchPosts();
+    }
+  };
+
+  const deleteThread = async (threadId: string) => {
+    const { error } = await supabase
+      .from('threads')
+      .delete()
+      .eq('id', threadId);
+
+    if (error) {
+      toast({
+        title: 'Error deleting thread',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Thread deleted' });
+      fetchThreads();
+    }
+  };
+
+  const deleteGroup = async (groupId: string) => {
+    const { error } = await supabase
+      .from('groups')
+      .delete()
+      .eq('id', groupId);
+
+    if (error) {
+      toast({
+        title: 'Error deleting group',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Group deleted' });
+      fetchGroups();
+    }
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -184,14 +284,17 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList>
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="users">
               <Users className="h-4 w-4 mr-2" />
-              Users & Roles
+              Users
             </TabsTrigger>
+            <TabsTrigger value="posts">Posts</TabsTrigger>
+            <TabsTrigger value="threads">Threads</TabsTrigger>
+            <TabsTrigger value="groups">Groups</TabsTrigger>
             <TabsTrigger value="organizations">
               <Building className="h-4 w-4 mr-2" />
-              Organizations
+              Orgs
             </TabsTrigger>
           </TabsList>
 
@@ -254,6 +357,134 @@ export default function Admin() {
                         <TableCell>{u.display_name || 'Unknown User'}</TableCell>
                         <TableCell>
                           {u.user_roles?.map((r: any) => r.role).join(', ') || 'No roles'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="posts" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>All Posts ({posts.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Content</TableHead>
+                      <TableHead>Author</TableHead>
+                      <TableHead>Likes</TableHead>
+                      <TableHead>Comments</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {posts.map((post) => (
+                      <TableRow key={post.id}>
+                        <TableCell className="max-w-md truncate">{post.content}</TableCell>
+                        <TableCell>{post.profiles?.display_name}</TableCell>
+                        <TableCell>{post.likes_count}</TableCell>
+                        <TableCell>{post.comments_count}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deletePost(post.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="threads" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>All Threads ({threads.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Author</TableHead>
+                      <TableHead>Views</TableHead>
+                      <TableHead>Replies</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {threads.map((thread) => (
+                      <TableRow key={thread.id}>
+                        <TableCell className="max-w-md truncate">{thread.title}</TableCell>
+                        <TableCell>{thread.profiles?.display_name}</TableCell>
+                        <TableCell>{thread.views_count}</TableCell>
+                        <TableCell>{thread.replies_count}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteThread(thread.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="groups" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>All Groups ({groups.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Privacy</TableHead>
+                      <TableHead>Members</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {groups.map((group) => (
+                      <TableRow key={group.id}>
+                        <TableCell>{group.name}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            group.privacy === 'private' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                          }`}>
+                            {group.privacy}
+                          </span>
+                        </TableCell>
+                        <TableCell>{group.members_count}</TableCell>
+                        <TableCell>
+                          {new Date(group.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteGroup(group.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}

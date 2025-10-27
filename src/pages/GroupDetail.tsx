@@ -5,15 +5,27 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Send, Users, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Send, Users, Edit, Trash2, Crown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export default function GroupDetail() {
   const { id } = useParams();
@@ -24,19 +36,26 @@ export default function GroupDetail() {
   const [newMessage, setNewMessage] = useState('');
   const [isMember, setIsMember] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [editingMessage, setEditingMessage] = useState<string | null>(null);
+  const [isCreator, setIsCreator] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [groupEditData, setGroupEditData] = useState({ name: '', description: '' });
+  const [members, setMembers] = useState<any[]>([]);
+  const [selectedNewOwner, setSelectedNewOwner] = useState('');
 
   useEffect(() => {
     fetchGroup();
     checkMembership();
+    fetchMembers();
   }, [id, user]);
 
   useEffect(() => {
     if (isMember) {
       fetchMessages();
-      subscribeToMessages();
+      const channel = subscribeToMessages();
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [isMember]);
 
@@ -50,7 +69,21 @@ export default function GroupDetail() {
     if (data) {
       setGroup(data);
       setGroupEditData({ name: data.name, description: data.description || '' });
+      setIsCreator(data.creator_id === user?.id);
     }
+  };
+
+  const fetchMembers = async () => {
+    const { data } = await supabase
+      .from('group_members')
+      .select(`
+        user_id,
+        is_admin,
+        profiles!group_members_user_id_fkey(id, display_name, avatar_url)
+      `)
+      .eq('group_id', id);
+
+    setMembers(data || []);
   };
 
   const checkMembership = async () => {
@@ -97,9 +130,7 @@ export default function GroupDetail() {
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return channel;
   };
 
   const joinGroup = async () => {
@@ -118,9 +149,8 @@ export default function GroupDetail() {
       });
     } else {
       setIsMember(true);
-      toast({
-        title: "Joined group!",
-      });
+      toast({ title: "Joined group!" });
+      fetchGroup();
     }
   };
 
@@ -138,11 +168,67 @@ export default function GroupDetail() {
         variant: "destructive",
       });
     } else {
-      toast({
-        title: "Left group",
-      });
+      toast({ title: "Left group" });
       navigate('/groups');
     }
+  };
+
+  const deleteGroup = async () => {
+    const { error } = await supabase
+      .from('groups')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: "Error deleting group",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({ title: "Group deleted successfully" });
+      navigate('/groups');
+    }
+  };
+
+  const transferOwnership = async () => {
+    if (!selectedNewOwner) return;
+
+    // Update group creator
+    const { error: groupError } = await supabase
+      .from('groups')
+      .update({ creator_id: selectedNewOwner })
+      .eq('id', id);
+
+    if (groupError) {
+      toast({
+        title: "Error transferring ownership",
+        description: groupError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Make new owner admin
+    const { error: memberError } = await supabase
+      .from('group_members')
+      .update({ is_admin: true })
+      .eq('group_id', id)
+      .eq('user_id', selectedNewOwner);
+
+    if (memberError) {
+      toast({
+        title: "Error updating admin status",
+        description: memberError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({ title: "Ownership transferred successfully" });
+    setTransferDialogOpen(false);
+    fetchGroup();
+    checkMembership();
   };
 
   const sendMessage = async () => {
@@ -215,10 +301,78 @@ export default function GroupDetail() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Groups
           </Button>
-          {isMember && (
+          {isMember && !isCreator && (
             <Button variant="outline" onClick={leaveGroup}>
               Leave Group
             </Button>
+          )}
+          {isCreator && (
+            <div className="flex space-x-2">
+              <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Crown className="h-4 w-4 mr-2" />
+                    Transfer Ownership
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Transfer Group Ownership</DialogTitle>
+                    <DialogDescription>
+                      Select a member to transfer ownership to. This action cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <Label>Select New Owner</Label>
+                    <Select value={selectedNewOwner} onValueChange={setSelectedNewOwner}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a member" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {members
+                          .filter(m => m.user_id !== user?.id)
+                          .map(member => (
+                            <SelectItem key={member.user_id} value={member.user_id}>
+                              {member.profiles?.display_name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setTransferDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={transferOwnership} disabled={!selectedNewOwner}>
+                      Transfer
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Group
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete the group and all its messages. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={deleteGroup} className="bg-destructive text-destructive-foreground">
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           )}
         </div>
 
@@ -230,7 +384,7 @@ export default function GroupDetail() {
                 <div>
                   <h1 className="text-2xl font-bold">{group.name}</h1>
                   <p className="text-sm text-muted-foreground">
-                    {group.members_count} members
+                    {group.members_count} members • {group.privacy === 'private' ? 'Private' : 'Public'}
                   </p>
                 </div>
               </div>
@@ -310,6 +464,11 @@ export default function GroupDetail() {
                         <div
                           className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[70%]`}
                         >
+                          {!isOwn && (
+                            <p className="text-xs font-semibold mb-1 text-muted-foreground">
+                              {msg.profiles?.display_name || 'Unknown'}
+                            </p>
+                          )}
                           <div
                             className={`rounded-lg px-4 py-2 ${
                               isOwn
@@ -317,11 +476,6 @@ export default function GroupDetail() {
                                 : 'bg-muted'
                             }`}
                           >
-                            {!isOwn && (
-                              <p className="text-xs font-semibold mb-1">
-                                {msg.profiles?.display_name || 'Unknown'}
-                              </p>
-                            )}
                             <p className="whitespace-pre-wrap">{msg.content}</p>
                           </div>
                           <div className="flex items-center space-x-2 mt-1">

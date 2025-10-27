@@ -29,7 +29,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     { path: '/feed', label: 'Feed', icon: Home },
     { path: '/threads', label: 'Threads', icon: MessageSquare },
     { path: '/groups', label: 'Groups', icon: Users },
-    { path: '/following', label: 'Following', icon: UserPlus },
+    { path: '/people', label: 'People', icon: UserPlus },
     { path: '/earn', label: 'Earn', icon: Coins },
     { path: '/rewards', label: 'Rewards', icon: Gift },
     { path: '/organizations', label: 'Organizations', icon: Building2 },
@@ -43,11 +43,11 @@ export function MainLayout({ children }: MainLayoutProps) {
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/')}>
             <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
-              <span className="text-white font-bold text-xl">EC</span>
-            </div>
-            <span className="font-bold text-xl bg-gradient-primary bg-clip-text text-transparent">
-              EduConnect
-            </span>
+            <span className="text-white font-bold text-xl">TC</span>
+          </div>
+          <span className="font-bold text-xl bg-gradient-primary bg-clip-text text-transparent">
+            TLC-Connect
+          </span>
           </div>
 
           <nav className="hidden md:flex items-center space-x-1">
