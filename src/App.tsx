@@ -4,14 +4,19 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import Index from "./pages/Index";
+import { WalletProvider } from "@/contexts/WalletContext";
 import Auth from "./pages/Auth";
 import Feed from "./pages/Feed";
 import Threads from "./pages/Threads";
+import ThreadDetail from "./pages/ThreadDetail";
 import Earn from "./pages/Earn";
 import Rewards from "./pages/Rewards";
 import Groups from "./pages/Groups";
+import GroupDetail from "./pages/GroupDetail";
 import Organizations from "./pages/Organizations";
+import Profile from "./pages/Profile";
+import Admin from "./pages/Admin";
+import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,45 +46,62 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
+          <WalletProvider>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Feed />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/threads"
+                element={
+                  <ProtectedRoute>
+                    <Threads />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/threads/:id"
+                element={
+                  <ProtectedRoute>
+                    <ThreadDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/earn"
+                element={
+                  <ProtectedRoute>
+                    <Earn />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/rewards"
+                element={
+                  <ProtectedRoute>
+                    <Rewards />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/groups"
+                element={
+                  <ProtectedRoute>
+                    <Groups />
+                  </ProtectedRoute>
+                }
+              />
             <Route
-              path="/"
+              path="/groups/:id"
               element={
                 <ProtectedRoute>
-                  <Feed />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/threads"
-              element={
-                <ProtectedRoute>
-                  <Threads />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/earn"
-              element={
-                <ProtectedRoute>
-                  <Earn />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/rewards"
-              element={
-                <ProtectedRoute>
-                  <Rewards />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/groups"
-              element={
-                <ProtectedRoute>
-                  <Groups />
+                  <GroupDetail />
                 </ProtectedRoute>
               }
             />
@@ -91,9 +113,34 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <Admin />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <Notifications />
+                </ProtectedRoute>
+              }
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
-          </Routes>
+            </Routes>
+          </WalletProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

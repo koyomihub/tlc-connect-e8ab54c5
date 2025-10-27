@@ -3,9 +3,10 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Coins, ShoppingBag, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Coins, ShoppingBag, Sparkles, Wallet } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWallet } from '@/contexts/WalletContext';
 import { toast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -28,6 +29,7 @@ interface NFTItem {
 
 export default function Rewards() {
   const { user } = useAuth();
+  const { account, connectWallet, purchaseNFT: blockchainPurchase } = useWallet();
   const [nftItems, setNftItems] = useState<NFTItem[]>([]);
   const [userBalance, setUserBalance] = useState(0);
   const [selectedItem, setSelectedItem] = useState<NFTItem | null>(null);
@@ -63,10 +65,19 @@ export default function Rewards() {
   const purchaseNFT = async () => {
     if (!selectedItem || !user) return;
 
+    if (!account) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet to purchase NFTs",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (userBalance < selectedItem.price) {
       toast({
         title: "Insufficient balance",
-        description: `You need ${selectedItem.price - userBalance} more tokens to purchase this NFT.`,
+        description: `You need ${selectedItem.price - userBalance} more tokens.`,
         variant: "destructive",
       });
       return;
@@ -75,6 +86,13 @@ export default function Rewards() {
     setPurchasing(true);
 
     try {
+      // Process blockchain transaction
+      const success = await blockchainPurchase(selectedItem.id, selectedItem.price);
+      
+      if (!success) {
+        throw new Error('Blockchain transaction failed');
+      }
+
       // Deduct tokens
       const { error: balanceError } = await supabase
         .from('profiles')
@@ -93,7 +111,7 @@ export default function Rewards() {
 
       if (nftError) throw nftError;
 
-      // Update available supply
+      // Update supply
       await supabase
         .from('nft_items')
         .update({ available_supply: selectedItem.available_supply - 1 })
@@ -131,8 +149,7 @@ export default function Rewards() {
   return (
     <MainLayout>
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center">
               <Sparkles className="h-8 w-8 mr-2 text-primary" />
@@ -144,17 +161,22 @@ export default function Rewards() {
           </div>
 
           <Card className="shadow-md">
-            <CardContent className="flex items-center space-x-2 p-4">
-              <Coins className="h-5 w-5 text-success" />
+            <CardContent className="flex items-center space-x-3 p-4">
+              <Coins className="h-6 w-6 text-success" />
               <div>
-                <div className="text-sm text-muted-foreground">Your Balance</div>
+                <div className="text-xs text-muted-foreground">Your Balance</div>
                 <div className="text-2xl font-bold">{userBalance.toLocaleString()}</div>
               </div>
+              {!account && (
+                <Button onClick={connectWallet} size="sm" variant="outline">
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Connect
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* NFT Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {nftItems.map((item) => (
             <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-all group">
@@ -216,7 +238,6 @@ export default function Rewards() {
           </Card>
         )}
 
-        {/* Purchase Confirmation Dialog */}
         <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
           <DialogContent>
             <DialogHeader>
@@ -257,6 +278,13 @@ export default function Rewards() {
                     </span>
                   </div>
                 </div>
+
+                {!account && (
+                  <div className="bg-warning/10 border border-warning rounded-lg p-3 text-sm">
+                    <p className="font-semibold">Wallet Required</p>
+                    <p className="text-muted-foreground">Connect your wallet to complete the purchase</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -264,7 +292,7 @@ export default function Rewards() {
               <Button variant="outline" onClick={() => setSelectedItem(null)}>
                 Cancel
               </Button>
-              <Button onClick={purchaseNFT} disabled={purchasing}>
+              <Button onClick={purchaseNFT} disabled={purchasing || !account}>
                 {purchasing ? "Processing..." : "Confirm Purchase"}
               </Button>
             </DialogFooter>

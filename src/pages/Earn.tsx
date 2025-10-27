@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Coins, TrendingUp, Award, Users, Heart, MessageCircle } from 'lucide-react';
+import { Coins, TrendingUp, Award, Users, Heart, MessageCircle, Wallet } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWallet } from '@/contexts/WalletContext';
 import { toast } from '@/hooks/use-toast';
 
 interface TokenStats {
@@ -24,12 +26,14 @@ interface EarnActivity {
 
 export default function Earn() {
   const { user } = useAuth();
+  const { account, connectWallet, claimTokens } = useWallet();
   const [stats, setStats] = useState<TokenStats>({
     balance: 0,
     earnedToday: 0,
     totalEarned: 0,
     rank: 0,
   });
+  const [claiming, setClaiming] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,14 +43,12 @@ export default function Earn() {
   const fetchTokenStats = async () => {
     if (!user) return;
 
-    // Fetch user's current balance
     const { data: profile } = await supabase
       .from('profiles')
       .select('token_balance')
       .eq('id', user.id)
       .single();
 
-    // Fetch today's earnings
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -58,7 +60,6 @@ export default function Earn() {
 
     const earnedToday = todayTransactions?.reduce((sum, t) => sum + (t.amount > 0 ? t.amount : 0), 0) || 0;
 
-    // Fetch total earned
     const { data: allTransactions } = await supabase
       .from('token_transactions')
       .select('amount')
@@ -70,9 +71,33 @@ export default function Earn() {
       balance: profile?.token_balance || 0,
       earnedToday,
       totalEarned,
-      rank: Math.floor(Math.random() * 100) + 1, // TODO: Calculate actual rank
+      rank: Math.floor(Math.random() * 100) + 1,
     });
     setLoading(false);
+  };
+
+  const handleClaimTokens = async () => {
+    if (stats.balance === 0) {
+      toast({
+        title: "No tokens to claim",
+        description: "Earn tokens by interacting with posts",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setClaiming(true);
+    const success = await claimTokens(stats.balance);
+    
+    if (success && account) {
+      await supabase
+        .from('profiles')
+        .update({ wallet_address: account })
+        .eq('id', user?.id);
+      
+      fetchTokenStats();
+    }
+    setClaiming(false);
   };
 
   const activities: EarnActivity[] = [
@@ -111,7 +136,6 @@ export default function Earn() {
   return (
     <MainLayout>
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
         <div>
           <h1 className="text-3xl font-bold bg-gradient-accent bg-clip-text text-transparent">
             Earn Tokens
@@ -121,7 +145,6 @@ export default function Earn() {
           </p>
         </div>
 
-        {/* Token Balance Card */}
         <Card className="shadow-lg bg-gradient-accent">
           <CardHeader>
             <CardTitle className="flex items-center text-white">
@@ -157,10 +180,36 @@ export default function Earn() {
                 <div className="text-sm text-white/70">Rank</div>
               </div>
             </div>
+
+            <div className="pt-4 border-t border-white/20">
+              {!account ? (
+                <Button 
+                  onClick={connectWallet} 
+                  variant="secondary"
+                  className="w-full"
+                >
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Connect Wallet to Claim
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-white/80 font-mono text-center">
+                    {account.slice(0, 6)}...{account.slice(-4)}
+                  </p>
+                  <Button 
+                    onClick={handleClaimTokens}
+                    disabled={claiming || stats.balance === 0}
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    Claim to Wallet
+                  </Button>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Daily Goal */}
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -182,7 +231,6 @@ export default function Earn() {
           </CardContent>
         </Card>
 
-        {/* Ways to Earn */}
         <div>
           <h2 className="text-2xl font-bold mb-4">Ways to Earn Tokens</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -212,7 +260,6 @@ export default function Earn() {
           </div>
         </div>
 
-        {/* Important Notes */}
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
             <CardTitle className="text-primary">Important</CardTitle>
@@ -221,7 +268,8 @@ export default function Earn() {
             <p>• You cannot earn tokens by liking your own posts</p>
             <p>• Each like from another user counts only once (no duplicates)</p>
             <p>• Unliking a post does not reduce your earned tokens</p>
-            <p>• Tokens are blockchain-based and can be used in the Rewards store</p>
+            <p>• Connect your wallet to claim tokens on the Polygon blockchain</p>
+            <p>• Tokens can be used in the Rewards store to purchase NFTs</p>
           </CardContent>
         </Card>
       </div>
