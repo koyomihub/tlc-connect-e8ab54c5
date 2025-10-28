@@ -15,11 +15,13 @@ interface Post {
   id: string;
   content: string;
   image_url: string | null;
+  image_urls: string[] | null;
   likes_count: number;
   comments_count: number;
   created_at: string;
   user_id: string;
   profiles: {
+    id: string;
     display_name: string;
     avatar_url: string;
   };
@@ -31,6 +33,7 @@ interface Comment {
   created_at: string;
   user_id: string;
   profiles: {
+    id: string;
     display_name: string;
     avatar_url: string;
   };
@@ -45,6 +48,7 @@ export default function PostDetail() {
   const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     if (id) {
@@ -191,7 +195,10 @@ export default function PostDetail() {
 
         <Card className="p-6">
           <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center space-x-3">
+            <div 
+              className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => navigate(`/profile/${post.user_id}`)}
+            >
               <Avatar>
                 <AvatarImage src={post.profiles?.avatar_url} />
                 <AvatarFallback>
@@ -214,13 +221,34 @@ export default function PostDetail() {
 
           <p className="mb-4 whitespace-pre-wrap">{post.content}</p>
 
-          {post.image_url && (
+          {post.image_urls && post.image_urls.length > 0 ? (
+            <div className="relative mb-4">
+              <img
+                src={post.image_urls[currentImageIndex]}
+                alt={`Post image ${currentImageIndex + 1}`}
+                className="w-full rounded-lg max-h-[500px] object-cover"
+              />
+              {post.image_urls.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-2 bg-black/50 px-4 py-2 rounded-full">
+                  {post.image_urls.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentImageIndex(index)}
+                      className={`h-2 w-2 rounded-full transition-all ${
+                        index === currentImageIndex ? 'bg-white w-4' : 'bg-white/50'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : post.image_url ? (
             <img
               src={post.image_url}
               alt="Post"
               className="w-full rounded-lg mb-4 max-h-[500px] object-cover"
             />
-          )}
+          ) : null}
 
           <div className="flex items-center space-x-4 pt-4 border-t">
             <Button
@@ -256,7 +284,10 @@ export default function PostDetail() {
           <div className="space-y-4">
             {comments.map((comment) => (
               <div key={comment.id} className="flex items-start space-x-3 p-4 bg-accent/50 rounded-lg">
-                <Avatar className="h-8 w-8">
+                <Avatar 
+                  className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => navigate(`/profile/${comment.user_id}`)}
+                >
                   <AvatarImage src={comment.profiles?.avatar_url} />
                   <AvatarFallback>
                     {comment.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
@@ -265,7 +296,12 @@ export default function PostDetail() {
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-sm">{comment.profiles?.display_name}</p>
+                      <p 
+                        className="font-semibold text-sm cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => navigate(`/profile/${comment.user_id}`)}
+                      >
+                        {comment.profiles?.display_name}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                       </p>
@@ -280,7 +316,7 @@ export default function PostDetail() {
                       </Button>
                     )}
                   </div>
-                  <p className="mt-2 text-sm">{comment.content}</p>
+                  <p className="mt-2 text-sm text-muted-foreground/90">{comment.content}</p>
                 </div>
               </div>
             ))}

@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Camera, Wallet, Coins } from 'lucide-react';
+import { Camera, Wallet, Coins, Repeat2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -19,6 +19,7 @@ export default function Profile() {
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [userThreads, setUserThreads] = useState<any[]>([]);
   const [userGroups, setUserGroups] = useState<any[]>([]);
+  const [userReposts, setUserReposts] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     display_name: '',
     bio: '',
@@ -54,13 +55,33 @@ export default function Profile() {
   const fetchUserStats = async () => {
     if (!user) return;
 
-    // Fetch posts
+    // Fetch posts with full details
     const { data: posts } = await supabase
       .from('posts')
-      .select('*')
+      .select(`
+        *,
+        profiles!posts_user_id_fkey(display_name, avatar_url)
+      `)
       .eq('user_id', user.id)
-      .eq('is_hidden', false);
+      .eq('is_hidden', false)
+      .order('created_at', { ascending: false })
+      .limit(5);
     setUserPosts(posts || []);
+
+    // Fetch reposts
+    const { data: reposts } = await supabase
+      .from('reposts')
+      .select(`
+        *,
+        posts(
+          *,
+          profiles!posts_user_id_fkey(display_name, avatar_url)
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    setUserReposts(reposts || []);
 
     // Fetch threads
     const { data: threads } = await supabase
@@ -167,7 +188,7 @@ export default function Profile() {
               <img
                 src={profile.cover_photo_url}
                 alt="Cover"
-                className="w-full h-full object-cover object-center"
+              className="w-full h-full object-cover object-center"
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-r from-primary/20 to-primary/10" />
@@ -305,21 +326,88 @@ export default function Profile() {
         </div>
 
         {/* User Posts */}
-        {userPosts.length > 0 && (
+        {(userPosts.length > 0 || userReposts.length > 0) && (
           <Card>
             <CardHeader>
-              <h3 className="text-xl font-semibold">Recent Posts</h3>
+              <h3 className="text-xl font-semibold">Recent Activity</h3>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {userPosts.slice(0, 5).map((post) => (
-                <div key={post.id} className="border-b last:border-0 pb-4 last:pb-0">
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(post.created_at).toLocaleDateString()}
+            <CardContent className="space-y-6">
+              {/* Original Posts */}
+              {userPosts.map((post) => (
+                <div key={`post-${post.id}`} className="border-b last:border-0 pb-6 last:pb-0">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Posted {new Date(post.created_at).toLocaleDateString()}
                   </p>
-                  <p className="mt-1">{post.content}</p>
-                  <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
+                  <p className="mb-3">{post.content}</p>
+                  
+                  {/* Display images */}
+                  {post.image_urls && post.image_urls.length > 0 ? (
+                    <div className={`grid gap-2 mb-3 ${post.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                      {post.image_urls.map((url: string, index: number) => (
+                        <img
+                          key={index}
+                          src={url}
+                          alt={`Post image ${index + 1}`}
+                          className="w-full rounded-lg max-h-[300px] object-cover"
+                        />
+                      ))}
+                    </div>
+                  ) : post.image_url ? (
+                    <img
+                      src={post.image_url}
+                      alt="Post"
+                      className="w-full rounded-lg mb-3 max-h-[400px] object-cover"
+                    />
+                  ) : null}
+
+                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                     <span>{post.likes_count} likes</span>
                     <span>{post.comments_count} comments</span>
+                  </div>
+                </div>
+              ))}
+
+              {/* Reposts */}
+              {userReposts.map((repost: any) => (
+                <div key={`repost-${repost.id}`} className="border-b last:border-0 pb-6 last:pb-0 bg-accent/30 p-4 rounded-lg">
+                  <p className="text-sm text-green-600 dark:text-green-400 mb-2 flex items-center">
+                    <Repeat2 className="h-4 w-4 mr-1" />
+                    Reposted {new Date(repost.created_at).toLocaleDateString()}
+                  </p>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={repost.posts?.profiles?.avatar_url} />
+                      <AvatarFallback>
+                        {repost.posts?.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <p className="text-sm font-semibold">{repost.posts?.profiles?.display_name}</p>
+                  </div>
+                  <p className="mb-3">{repost.posts?.content}</p>
+
+                  {/* Display images from reposted content */}
+                  {repost.posts?.image_urls && repost.posts.image_urls.length > 0 ? (
+                    <div className={`grid gap-2 mb-3 ${repost.posts.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                      {repost.posts.image_urls.map((url: string, index: number) => (
+                        <img
+                          key={index}
+                          src={url}
+                          alt={`Repost image ${index + 1}`}
+                          className="w-full rounded-lg max-h-[300px] object-cover"
+                        />
+                      ))}
+                    </div>
+                  ) : repost.posts?.image_url ? (
+                    <img
+                      src={repost.posts.image_url}
+                      alt="Repost"
+                      className="w-full rounded-lg mb-3 max-h-[400px] object-cover"
+                    />
+                  ) : null}
+
+                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                    <span>{repost.posts?.likes_count} likes</span>
+                    <span>{repost.posts?.comments_count} comments</span>
                   </div>
                 </div>
               ))}

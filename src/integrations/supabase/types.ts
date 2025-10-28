@@ -50,6 +50,55 @@ export type Database = {
           },
         ]
       }
+      group_invitations: {
+        Row: {
+          created_at: string | null
+          group_id: string
+          id: string
+          invitee_id: string
+          inviter_id: string
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          group_id: string
+          id?: string
+          invitee_id: string
+          inviter_id: string
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          group_id?: string
+          id?: string
+          invitee_id?: string
+          inviter_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_invitations_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_invitations_invitee_id_fkey"
+            columns: ["invitee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_invitations_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_members: {
         Row: {
           group_id: string
@@ -547,11 +596,120 @@ export type Database = {
         }
         Relationships: []
       }
+      reply_likes: {
+        Row: {
+          created_at: string | null
+          id: string
+          reply_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          reply_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          reply_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reply_likes_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "thread_replies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reply_likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reposts: {
+        Row: {
+          created_at: string | null
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reposts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reposts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      thread_likes: {
+        Row: {
+          created_at: string | null
+          id: string
+          thread_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          thread_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          thread_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "thread_likes_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       thread_replies: {
         Row: {
           content: string
           created_at: string | null
           id: string
+          likes_count: number | null
           thread_id: string
           updated_at: string | null
           user_id: string
@@ -560,6 +718,7 @@ export type Database = {
           content: string
           created_at?: string | null
           id?: string
+          likes_count?: number | null
           thread_id: string
           updated_at?: string | null
           user_id: string
@@ -568,6 +727,7 @@ export type Database = {
           content?: string
           created_at?: string | null
           id?: string
+          likes_count?: number | null
           thread_id?: string
           updated_at?: string | null
           user_id?: string
@@ -589,11 +749,48 @@ export type Database = {
           },
         ]
       }
+      thread_views: {
+        Row: {
+          created_at: string | null
+          id: string
+          thread_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          thread_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          thread_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "thread_views_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       threads: {
         Row: {
           content: string
           created_at: string | null
           id: string
+          likes_count: number | null
           replies_count: number | null
           title: string
           updated_at: string | null
@@ -604,6 +801,7 @@ export type Database = {
           content: string
           created_at?: string | null
           id?: string
+          likes_count?: number | null
           replies_count?: number | null
           title: string
           updated_at?: string | null
@@ -614,6 +812,7 @@ export type Database = {
           content?: string
           created_at?: string | null
           id?: string
+          likes_count?: number | null
           replies_count?: number | null
           title?: string
           updated_at?: string | null

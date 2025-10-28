@@ -42,6 +42,7 @@ export default function GroupDetail() {
   const [groupEditData, setGroupEditData] = useState({ name: '', description: '' });
   const [members, setMembers] = useState<any[]>([]);
   const [selectedNewOwner, setSelectedNewOwner] = useState('');
+  const [creatorProfile, setCreatorProfile] = useState<any>(null);
 
   useEffect(() => {
     fetchGroup();
@@ -62,7 +63,10 @@ export default function GroupDetail() {
   const fetchGroup = async () => {
     const { data } = await supabase
       .from('groups')
-      .select('*')
+      .select(`
+        *,
+        profiles!groups_creator_id_fkey(id, display_name, avatar_url)
+      `)
       .eq('id', id)
       .single();
 
@@ -70,6 +74,7 @@ export default function GroupDetail() {
       setGroup(data);
       setGroupEditData({ name: data.name, description: data.description || '' });
       setIsCreator(data.creator_id === user?.id);
+      setCreatorProfile(data.profiles);
     }
   };
 
@@ -386,6 +391,11 @@ export default function GroupDetail() {
                   <p className="text-sm text-muted-foreground">
                     {group.members_count} members • {group.privacy === 'private' ? 'Private' : 'Public'}
                   </p>
+                  {creatorProfile && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Created by {creatorProfile.display_name}
+                    </p>
+                  )}
                 </div>
               </div>
               {isAdmin && (

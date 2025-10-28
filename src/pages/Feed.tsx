@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Heart, MessageCircle, Send, Image as ImageIcon, X } from 'lucide-react';
+import { Heart, MessageCircle, Send, Image as ImageIcon, X, Repeat2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface Post {
@@ -36,12 +36,14 @@ export default function Feed() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
+  const [repostedPosts, setRepostedPosts] = useState<Set<string>>(new Set());
   const [userProfile, setUserProfile] = useState<{ avatar_url?: string; display_name?: string } | null>(null);
 
   useEffect(() => {
     if (user) {
       fetchPosts();
       fetchLikedPosts();
+      fetchRepostedPosts();
       fetchUserProfile();
     }
   }, [user]);
@@ -87,6 +89,18 @@ export default function Feed() {
 
     if (data) {
       setLikedPosts(new Set(data.map(like => like.post_id)));
+    }
+  };
+
+  const fetchRepostedPosts = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('reposts')
+      .select('post_id')
+      .eq('user_id', user.id);
+
+    if (data) {
+      setRepostedPosts(new Set(data.map(repost => repost.post_id)));
     }
   };
 
@@ -191,6 +205,38 @@ export default function Feed() {
     fetchPosts();
   };
 
+  const toggleRepost = async (postId: string) => {
+    if (!user) return;
+
+    const isReposted = repostedPosts.has(postId);
+
+    try {
+      if (isReposted) {
+        await supabase
+          .from('reposts')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', user.id);
+
+        setRepostedPosts(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(postId);
+          return newSet;
+        });
+        toast({ title: 'Repost removed' });
+      } else {
+        await supabase
+          .from('reposts')
+          .insert({ post_id: postId, user_id: user.id });
+
+        setRepostedPosts(prev => new Set(prev).add(postId));
+        toast({ title: 'Post reposted!' });
+      }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
   return (
     <MainLayout>
       <div className="max-w-2xl mx-auto space-y-6">
@@ -257,18 +303,27 @@ export default function Feed() {
 
         {posts.map((post) => {
           const isLiked = likedPosts.has(post.id);
+          const isReposted = repostedPosts.has(post.id);
 
           return (
             <Card key={post.id} className="p-6">
               <div className="flex items-start space-x-3 mb-4">
-                <Avatar>
+                <Avatar 
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => navigate(`/profile/${post.user_id}`)}
+                >
                   <AvatarImage src={post.profiles?.avatar_url} />
                   <AvatarFallback>
                     {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-semibold">{post.profiles?.display_name}</p>
+                  <p 
+                    className="font-semibold cursor-pointer hover:text-primary transition-colors"
+                    onClick={() => navigate(`/profile/${post.user_id}`)}
+                  >
+                    {post.profiles?.display_name}
+                  </p>
                   <p className="text-sm text-muted-foreground">
                     {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                   </p>
@@ -315,6 +370,15 @@ export default function Feed() {
                 >
                   <MessageCircle className="mr-2 h-4 w-4" />
                   {post.comments_count}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleRepost(post.id)}
+                  className={isReposted ? 'text-green-500' : ''}
+                >
+                  <Repeat2 className={`mr-2 h-4 w-4 ${isReposted ? 'fill-current' : ''}`} />
+                  Repost
                 </Button>
               </div>
             </Card>
