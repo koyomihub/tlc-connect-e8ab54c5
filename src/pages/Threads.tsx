@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { MessageCircle, Eye, Plus } from 'lucide-react';
+import { MessageCircle, Eye, Plus, Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -28,6 +28,7 @@ interface Thread {
   content: string;
   views_count: number;
   replies_count: number;
+  likes_count: number;
   created_at: string;
   profiles: {
     display_name: string;
@@ -204,6 +205,10 @@ export default function Threads() {
                           <span className="flex items-center">
                             <MessageCircle className="h-4 w-4 mr-1" />
                             {thread.replies_count} replies
+                          </span>
+                          <span className="flex items-center">
+                            <Heart className="h-4 w-4 mr-1" />
+                            {thread.likes_count || 0} likes
                           </span>
                           <span>
                             by {thread.profiles?.display_name || 'Unknown User'}

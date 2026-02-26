@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ethers } from 'ethers';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface WalletContextType {
   account: string | null;
@@ -124,6 +125,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
 
       await updateBalance(address);
+
+      // Auto-save wallet address to user's profile
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await supabase
+          .from('profiles')
+          .update({ wallet_address: address })
+          .eq('id', authUser.id);
+      }
       
       toast({
         title: "Wallet connected!",
