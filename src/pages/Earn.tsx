@@ -89,12 +89,7 @@ export default function Earn() {
     setClaiming(true);
     const success = await claimTokens(stats.balance);
     
-    if (success && account) {
-      await supabase
-        .from('profiles')
-        .update({ wallet_address: account })
-        .eq('id', user?.id);
-      
+    if (success) {
       fetchTokenStats();
     }
     setClaiming(false);

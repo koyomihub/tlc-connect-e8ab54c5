@@ -189,9 +189,15 @@ export default function Feed() {
         .eq('post_id', postId)
         .eq('user_id', user.id);
 
-      setLikedPosts(prev => {
+    // Optimistic update
+    setPosts(prev => prev.map(p => p.id === postId
+      ? { ...p, likes_count: isLiked ? Math.max(0, p.likes_count - 1) : p.likes_count + 1 }
+      : p
+    ));
+
+    setLikedPosts(prev => {
         const newSet = new Set(prev);
-        newSet.delete(postId);
+        if (isLiked) newSet.delete(postId); else newSet.add(postId);
         return newSet;
       });
     } else {
@@ -199,10 +205,14 @@ export default function Feed() {
         .from('post_likes')
         .insert({ post_id: postId, user_id: user.id });
 
+      // Optimistic update
+      setPosts(prev => prev.map(p => p.id === postId
+        ? { ...p, likes_count: p.likes_count + 1 }
+        : p
+      ));
+
       setLikedPosts(prev => new Set(prev).add(postId));
     }
-
-    fetchPosts();
   };
 
   const toggleRepost = async (postId: string) => {
