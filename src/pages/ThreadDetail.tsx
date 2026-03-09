@@ -149,6 +149,11 @@ export default function ThreadDetail() {
       await supabase
         .from('thread_likes')
         .insert({ thread_id: id, user_id: user.id });
+
+      // Award tokens to thread owner
+      if (thread && thread.user_id !== user.id) {
+        awardTokens({ userId: thread.user_id, amount: 2, type: 'post_like_received', description: 'Your thread received a like' });
+      }
     }
 
     setIsLiked(!isLiked);
