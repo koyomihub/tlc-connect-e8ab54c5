@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { MessageCircle, Eye, Plus, Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { awardTokens } from '@/lib/awardTokens';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -97,6 +98,9 @@ export default function Threads() {
         title: "Thread created!",
         description: "Your discussion has been started.",
       });
+      if (user) {
+        awardTokens({ userId: user.id, amount: 5, type: 'thread_created', description: 'Created a new thread' });
+      }
     }
   };
 

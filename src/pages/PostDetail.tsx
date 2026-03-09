@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
 import { Heart, MessageCircle, ArrowLeft, Trash2 } from 'lucide-react';
+import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
 
 interface Post {
@@ -115,6 +116,11 @@ export default function PostDetail() {
       await supabase
         .from('post_likes')
         .insert({ post_id: id, user_id: user.id });
+
+      // Award tokens to the post owner
+      if (post && post.user_id !== user.id) {
+        awardTokens({ userId: post.user_id, amount: 2, type: 'post_like_received', description: 'Your post received a like', postId: id });
+      }
     }
 
     setIsLiked(!isLiked);
@@ -139,6 +145,12 @@ export default function PostDetail() {
       fetchComments();
       fetchPost();
       toast({ title: 'Comment posted!' });
+
+      // Award tokens: commenter gets 3, post owner gets 2
+      awardTokens({ userId: user.id, amount: 3, type: 'comment_created', description: 'Commented on a post' });
+      if (post && post.user_id !== user.id) {
+        awardTokens({ userId: post.user_id, amount: 2, type: 'comment_received', description: 'Your post received a comment', postId: id });
+      }
     }
   };
 

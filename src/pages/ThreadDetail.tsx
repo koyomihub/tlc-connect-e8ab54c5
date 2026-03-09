@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Trash2, Edit, MoreHorizontal, Heart, ThumbsUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { awardTokens } from '@/lib/awardTokens';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -148,6 +149,11 @@ export default function ThreadDetail() {
       await supabase
         .from('thread_likes')
         .insert({ thread_id: id, user_id: user.id });
+
+      // Award tokens to thread owner
+      if (thread && thread.user_id !== user.id) {
+        awardTokens({ userId: thread.user_id, amount: 2, type: 'post_like_received', description: 'Your thread received a like' });
+      }
     }
 
     setIsLiked(!isLiked);
@@ -223,6 +229,14 @@ export default function ThreadDetail() {
       fetchReplies();
       fetchThread();
       toast({ title: "Reply posted!" });
+
+      // Award tokens: replier gets 3, thread owner gets 2
+      if (user) {
+        awardTokens({ userId: user.id, amount: 3, type: 'comment_created', description: 'Replied to a thread' });
+      }
+      if (thread && user && thread.user_id !== user.id) {
+        awardTokens({ userId: thread.user_id, amount: 2, type: 'comment_received', description: 'Your thread received a reply' });
+      }
     }
   };
 
