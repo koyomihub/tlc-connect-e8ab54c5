@@ -214,6 +214,12 @@ export default function Feed() {
       ));
 
       setLikedPosts(prev => new Set(prev).add(postId));
+
+      // Award tokens to the post owner
+      const post = posts.find(p => p.id === postId);
+      if (post && post.user_id !== user.id) {
+        awardTokens({ userId: post.user_id, amount: 2, type: 'post_like_received', description: 'Your post received a like', postId });
+      }
     }
   };
 
