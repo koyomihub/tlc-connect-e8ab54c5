@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Send, Users, Edit, Trash2, Crown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { awardTokens } from '@/lib/awardTokens';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
