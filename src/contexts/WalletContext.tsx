@@ -9,7 +9,7 @@ interface WalletContextType {
   balance: string;
   connecting: boolean;
   connectWallet: () => Promise<void>;
-  disconnectWallet: () => void;
+  disconnectWallet: () => Promise<void>;
   claimTokens: (amount: number) => Promise<boolean>;
   purchaseNFT: (nftId: string, price: number) => Promise<boolean>;
 }
@@ -22,8 +22,39 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [balance, setBalance] = useState('0');
   const [connecting, setConnecting] = useState(false);
 
+  // Load saved wallet from profile on auth change
   useEffect(() => {
-    checkConnection();
+    const loadSavedWallet = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('wallet_address')
+          .eq('id', user.id)
+          .single();
+
+        if (profile?.wallet_address && window.ethereum) {
+          try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const accounts = await provider.listAccounts();
+            const matchingAccount = accounts.find(
+              a => a.address.toLowerCase() === profile.wallet_address!.toLowerCase()
+            );
+            if (matchingAccount) {
+              setAccount(profile.wallet_address);
+              const network = await provider.getNetwork();
+              setChainId(Number(network.chainId));
+              await updateBalance(profile.wallet_address);
+            }
+          } catch (e) {
+            console.error('Error restoring wallet:', e);
+          }
+        }
+      }
+    };
+
+    loadSavedWallet();
+
     if (window.ethereum) {
       window.ethereum.on('accountsChanged', handleAccountsChanged);
       window.ethereum.on('chainChanged', handleChainChanged);
@@ -35,25 +66,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
     };
   }, []);
-
-  const checkConnection = async () => {
-    if (window.ethereum) {
-      try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const accounts = await provider.listAccounts();
-        if (accounts.length > 0) {
-          const signer = await provider.getSigner();
-          const address = await signer.getAddress();
-          setAccount(address);
-          const network = await provider.getNetwork();
-          setChainId(Number(network.chainId));
-          await updateBalance(address);
-        }
-      } catch (error) {
-        console.error('Error checking connection:', error);
-      }
-    }
-  };
 
   const handleAccountsChanged = (accounts: string[]) => {
     if (accounts.length === 0) {
@@ -71,8 +83,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const updateBalance = async (address: string) => {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const balance = await provider.getBalance(address);
-      setBalance(ethers.formatEther(balance));
+      const bal = await provider.getBalance(address);
+      setBalance(ethers.formatEther(bal));
     } catch (error) {
       console.error('Error updating balance:', error);
     }
@@ -91,42 +103,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setConnecting(true);
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await provider.send('eth_requestAccounts', []);
+      await provider.send('eth_requestAccounts', []);
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
       setAccount(address);
-      
+
       const network = await provider.getNetwork();
-      const currentChainId = Number(network.chainId);
-      setChainId(currentChainId);
-
-      // Polygon Mumbai Testnet = 80001, Polygon Mainnet = 137
-      const polygonChainId = 80001;
-      if (currentChainId !== polygonChainId) {
-        try {
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: `0x${polygonChainId.toString(16)}` }],
-          });
-        } catch (switchError: any) {
-          if (switchError.code === 4902) {
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: `0x${polygonChainId.toString(16)}`,
-                chainName: 'Polygon Mumbai Testnet',
-                nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
-                rpcUrls: ['https://rpc-mumbai.maticvigil.com/'],
-                blockExplorerUrls: ['https://mumbai.polygonscan.com/'],
-              }],
-            });
-          }
-        }
-      }
-
+      setChainId(Number(network.chainId));
       await updateBalance(address);
 
-      // Auto-save wallet address to user's profile
+      // Save wallet address to user's profile
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (authUser) {
         await supabase
@@ -134,7 +120,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           .update({ wallet_address: address })
           .eq('id', authUser.id);
       }
-      
+
       toast({
         title: "Wallet connected!",
         description: `Connected to ${address.slice(0, 6)}...${address.slice(-4)}`,
@@ -150,10 +136,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const disconnectWallet = () => {
+  const disconnectWallet = async () => {
     setAccount(null);
     setChainId(null);
     setBalance('0');
+
+    // Clear wallet address from profile
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
+      await supabase
+        .from('profiles')
+        .update({ wallet_address: null })
+        .eq('id', authUser.id);
+    }
+
     toast({
       title: "Wallet disconnected",
       description: "Your wallet has been disconnected",
@@ -162,86 +158,40 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const claimTokens = async (amount: number): Promise<boolean> => {
     if (!account) {
-      toast({
-        title: "Wallet not connected",
-        description: "Please connect your wallet first",
-        variant: "destructive",
-      });
+      toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
       return false;
     }
 
     try {
-      // Simulate blockchain transaction
-      toast({
-        title: "Claiming tokens...",
-        description: "Please wait while your transaction is being processed",
-      });
-      
-      // In production, this would interact with smart contract
+      toast({ title: "Claiming tokens...", description: "Processing your claim" });
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast({
-        title: "Tokens claimed!",
-        description: `Successfully claimed ${amount} tokens`,
-      });
+      toast({ title: "Tokens claimed!", description: `Successfully claimed ${amount} tokens` });
       return true;
     } catch (error: any) {
-      toast({
-        title: "Claim failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Claim failed", description: error.message, variant: "destructive" });
       return false;
     }
   };
 
   const purchaseNFT = async (nftId: string, price: number): Promise<boolean> => {
     if (!account) {
-      toast({
-        title: "Wallet not connected",
-        description: "Please connect your wallet first",
-        variant: "destructive",
-      });
+      toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
       return false;
     }
 
     try {
-      toast({
-        title: "Processing purchase...",
-        description: "Please confirm the transaction in your wallet",
-      });
-      
-      // In production, this would interact with NFT marketplace contract
+      toast({ title: "Processing purchase...", description: "Please confirm the transaction in your wallet" });
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast({
-        title: "NFT purchased!",
-        description: "The NFT has been transferred to your wallet",
-      });
+      toast({ title: "NFT purchased!", description: "The NFT has been transferred to your wallet" });
       return true;
     } catch (error: any) {
-      toast({
-        title: "Purchase failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Purchase failed", description: error.message, variant: "destructive" });
       return false;
     }
   };
 
   return (
-    <WalletContext.Provider
-      value={{
-        account,
-        chainId,
-        balance,
-        connecting,
-        connectWallet,
-        disconnectWallet,
-        claimTokens,
-        purchaseNFT,
-      }}
-    >
+    <WalletContext.Provider value={{ account, chainId, balance, connecting, connectWallet, disconnectWallet, claimTokens, purchaseNFT }}>
       {children}
     </WalletContext.Provider>
   );
