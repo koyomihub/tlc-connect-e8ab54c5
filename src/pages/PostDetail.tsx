@@ -116,6 +116,11 @@ export default function PostDetail() {
       await supabase
         .from('post_likes')
         .insert({ post_id: id, user_id: user.id });
+
+      // Award tokens to the post owner
+      if (post && post.user_id !== user.id) {
+        awardTokens({ userId: post.user_id, amount: 2, type: 'post_like_received', description: 'Your post received a like', postId: id });
+      }
     }
 
     setIsLiked(!isLiked);
