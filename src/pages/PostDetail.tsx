@@ -270,7 +270,7 @@ export default function PostDetail() {
               className={isLiked ? 'text-red-500' : ''}
             >
               <Heart className={`mr-2 h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-              {post.likes_count}
+              {post.likes_count || 0}
             </Button>
             <Button variant="ghost" size="sm">
               <MessageCircle className="mr-2 h-4 w-4" />
