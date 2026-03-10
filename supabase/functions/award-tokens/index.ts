@@ -15,29 +15,93 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    const { userId, amount, type, description, postId } = await req.json();
-
-    if (!userId || !amount || !type) {
-      throw new Error('Missing required fields: userId, amount, type');
+    // Validate JWT and extract real user ID
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    if (amount <= 0) {
-      throw new Error('Amount must be positive');
+    const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    console.log('Awarding tokens:', { userId, amount, type, description });
+    const callerUserId = claimsData.claims.sub as string;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check daily earned amount
+    const { amount, type, description, postId } = await req.json();
+
+    if (!amount || !type) {
+      throw new Error('Missing required fields: amount, type');
+    }
+    if (amount <= 0 || amount > 50) {
+      throw new Error('Invalid amount');
+    }
+
+    // Determine the target user: for "received" types, look up the content owner server-side
+    let targetUserId = callerUserId;
+
+    const receivedTypes = ['post_like_received', 'comment_received'];
+    if (receivedTypes.includes(type)) {
+      if (!postId) {
+        throw new Error('postId required for received-type awards');
+      }
+      // Look up the actual owner of the post/thread
+      const { data: post, error: postError } = await supabase
+        .from('posts')
+        .select('user_id')
+        .eq('id', postId)
+        .single();
+
+      if (postError || !post) {
+        // Try threads table
+        const { data: thread, error: threadError } = await supabase
+          .from('threads')
+          .select('user_id')
+          .eq('id', postId)
+          .single();
+
+        if (threadError || !thread) {
+          throw new Error('Content not found');
+        }
+        targetUserId = thread.user_id;
+      } else {
+        targetUserId = post.user_id;
+      }
+
+      // Don't award tokens to yourself
+      if (targetUserId === callerUserId) {
+        return new Response(
+          JSON.stringify({ success: true, awarded: 0, reason: 'self_interaction' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    console.log('Awarding tokens:', { targetUserId, amount, type, description });
+
+    // Check daily earned amount for target user
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
     const { data: todayTransactions, error: todayError } = await supabase
       .from('token_transactions')
       .select('amount')
-      .eq('user_id', userId)
+      .eq('user_id', targetUserId)
       .gt('amount', 0)
       .gte('created_at', today.toISOString());
 
@@ -47,37 +111,36 @@ serve(async (req) => {
 
     if (earnedToday >= DAILY_TOKEN_LIMIT) {
       return new Response(
-        JSON.stringify({ error: 'Daily token limit reached (100 tokens/day)', earnedToday, limit: DAILY_TOKEN_LIMIT }),
+        JSON.stringify({ error: 'Daily token limit reached', earnedToday, limit: DAILY_TOKEN_LIMIT }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Cap the award to not exceed daily limit
     const allowedAmount = Math.min(amount, DAILY_TOKEN_LIMIT - earnedToday);
 
     // Duplicate check for post-related actions
-    if (postId && (type === 'post_like_received' || type === 'comment_received')) {
+    if (postId && receivedTypes.includes(type)) {
       const { data: existing } = await supabase
         .from('token_transactions')
         .select('id')
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .eq('type', type)
         .eq('post_id', postId)
         .limit(1);
 
       if (existing && existing.length > 0) {
         return new Response(
-          JSON.stringify({ error: 'Tokens already awarded for this action', duplicate: true }),
-          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ success: true, awarded: 0, duplicate: true }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
     }
 
-    // Update user's token balance
+    // Update token balance
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('token_balance')
-      .eq('id', userId)
+      .eq('id', targetUserId)
       .single();
 
     if (profileError) throw profileError;
@@ -87,13 +150,13 @@ serve(async (req) => {
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ token_balance: newBalance })
-      .eq('id', userId);
+      .eq('id', targetUserId);
 
     if (updateError) throw updateError;
 
     // Create transaction record
     const insertData: any = {
-      user_id: userId,
+      user_id: targetUserId,
       amount: allowedAmount,
       type,
       description,
@@ -106,17 +169,14 @@ serve(async (req) => {
 
     if (transactionError) throw transactionError;
 
-    console.log('Tokens awarded successfully:', { allowedAmount, newBalance, earnedToday: earnedToday + allowedAmount });
-
     return new Response(
       JSON.stringify({ success: true, newBalance, awarded: allowedAmount, earnedToday: earnedToday + allowedAmount, limit: DAILY_TOKEN_LIMIT }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Error awarding tokens:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'An error occurred processing your request' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
