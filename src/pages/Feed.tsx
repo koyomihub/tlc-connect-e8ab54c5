@@ -170,7 +170,7 @@ export default function Feed() {
       if (fileInputRef.current) fileInputRef.current.value = '';
       fetchPosts();
       toast({ title: 'Post created!', description: 'Your post has been shared' });
-      awardTokens({ userId: user.id, amount: 5, type: 'post_created', description: 'Created a new post' });
+      awardTokens({ amount: 5, type: 'post_created', description: 'Created a new post' });
     } catch (error: any) {
       console.error('Error creating post:', error);
       toast({ title: 'Error creating post', description: error.message, variant: 'destructive' });
