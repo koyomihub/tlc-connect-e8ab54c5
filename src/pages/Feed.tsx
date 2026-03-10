@@ -193,7 +193,7 @@ export default function Feed() {
 
     // Optimistic update
     setPosts(prev => prev.map(p => p.id === postId
-      ? { ...p, likes_count: isLiked ? Math.max(0, p.likes_count - 1) : p.likes_count + 1 }
+      ? { ...p, likes_count: Math.max(0, (p.likes_count || 0) - 1) }
       : p
     ));
 
@@ -209,7 +209,7 @@ export default function Feed() {
 
       // Optimistic update
       setPosts(prev => prev.map(p => p.id === postId
-        ? { ...p, likes_count: p.likes_count + 1 }
+        ? { ...p, likes_count: (p.likes_count || 0) + 1 }
         : p
       ));
 
@@ -379,7 +379,7 @@ export default function Feed() {
                   className={isLiked ? 'text-red-500' : ''}
                 >
                   <Heart className={`mr-2 h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-                  {post.likes_count}
+                  {post.likes_count || 0}
                 </Button>
                 <Button
                   variant="ghost"
@@ -387,7 +387,7 @@ export default function Feed() {
                   onClick={() => navigate(`/posts/${post.id}`)}
                 >
                   <MessageCircle className="mr-2 h-4 w-4" />
-                  {post.comments_count}
+                  {post.comments_count || 0}
                 </Button>
                 <Button
                   variant="ghost"
