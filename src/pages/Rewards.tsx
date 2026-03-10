@@ -29,7 +29,7 @@ interface NFTItem {
 
 export default function Rewards() {
   const { user } = useAuth();
-  const { account, connectWallet, purchaseNFT: blockchainPurchase } = useWallet();
+  const { account, connectWallet } = useWallet();
   const [nftItems, setNftItems] = useState<NFTItem[]>([]);
   const [userBalance, setUserBalance] = useState(0);
   const [selectedItem, setSelectedItem] = useState<NFTItem | null>(null);
@@ -74,62 +74,19 @@ export default function Rewards() {
       return;
     }
 
-    if (userBalance < selectedItem.price) {
-      toast({
-        title: "Insufficient balance",
-        description: `You need ${selectedItem.price - userBalance} more tokens.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     setPurchasing(true);
 
     try {
-      // Process blockchain transaction
-      const success = await blockchainPurchase(selectedItem.id, selectedItem.price);
-      
-      if (!success) {
-        throw new Error('Blockchain transaction failed');
-      }
+      const { data, error } = await supabase.functions.invoke('purchase-nft', {
+        body: { nftItemId: selectedItem.id },
+      });
 
-      // Deduct tokens
-      const { error: balanceError } = await supabase
-        .from('profiles')
-        .update({ token_balance: userBalance - selectedItem.price })
-        .eq('id', user.id);
-
-      if (balanceError) throw balanceError;
-
-      // Record purchase
-      const { error: nftError } = await supabase
-        .from('user_nfts')
-        .insert({
-          user_id: user.id,
-          nft_item_id: selectedItem.id,
-        });
-
-      if (nftError) throw nftError;
-
-      // Update supply
-      await supabase
-        .from('nft_items')
-        .update({ available_supply: selectedItem.available_supply - 1 })
-        .eq('id', selectedItem.id);
-
-      // Record transaction
-      await supabase
-        .from('token_transactions')
-        .insert({
-          user_id: user.id,
-          amount: -selectedItem.price,
-          type: 'nft_purchase',
-          description: `Purchased ${selectedItem.name}`,
-        });
+      if (error) throw new Error(error.message || 'Purchase failed');
+      if (data?.error) throw new Error(data.error);
 
       toast({
         title: "Purchase successful!",
-        description: `${selectedItem.name} has been added to your wallet.`,
+        description: `${selectedItem.name} has been added to your collection.`,
       });
 
       setSelectedItem(null);
