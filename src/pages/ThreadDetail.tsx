@@ -232,7 +232,7 @@ export default function ThreadDetail() {
 
       // Award tokens: replier gets 3, thread owner gets 2
       if (user) {
-        awardTokens({ amount: 3, type: 'comment_created', description: 'Replied to a thread' });
+        awardTokens({ type: 'comment_created', description: 'Replied to a thread' });
       }
       if (thread && user && thread.user_id !== user.id) {
         awardTokens({ amount: 2, type: 'comment_received', description: 'Your thread received a reply', postId: id });
