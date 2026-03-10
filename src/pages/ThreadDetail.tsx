@@ -235,7 +235,7 @@ export default function ThreadDetail() {
         awardTokens({ type: 'comment_created', description: 'Replied to a thread' });
       }
       if (thread && user && thread.user_id !== user.id) {
-        awardTokens({ amount: 2, type: 'comment_received', description: 'Your thread received a reply', postId: id });
+        awardTokens({ type: 'comment_received', description: 'Your thread received a reply', postId: id });
       }
     }
   };

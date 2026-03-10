@@ -158,7 +158,7 @@ export default function GroupDetail() {
       toast({ title: "Joined group!" });
       fetchGroup();
       if (user) {
-        awardTokens({ amount: 5, type: 'group_joined', description: 'Joined a group' });
+        awardTokens({ type: 'group_joined', description: 'Joined a group' });
       }
     }
   };
