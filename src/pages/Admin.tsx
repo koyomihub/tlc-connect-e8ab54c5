@@ -35,14 +35,11 @@ export default function Admin() {
   const checkAdminStatus = async () => {
     if (!user) return;
 
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .single();
+    // Server-side admin verification using SECURITY DEFINER function
+    const { data: isAdminResult, error } = await supabase
+      .rpc('is_admin', { _user_id: user.id });
 
-    if (!data) {
+    if (error || !isAdminResult) {
       toast({
         title: "Access denied",
         description: "You don't have permission to access this page",
