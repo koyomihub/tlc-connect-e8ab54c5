@@ -1,16 +1,15 @@
 import { supabase } from '@/integrations/supabase/client';
 
 interface AwardTokensParams {
-  userId: string;
   amount: number;
   type: string;
   description: string;
   postId?: string;
 }
 
-export async function awardTokens({ userId, amount, type, description, postId }: AwardTokensParams) {
+export async function awardTokens({ amount, type, description, postId }: AwardTokensParams) {
   try {
-    const body: Record<string, any> = { userId, amount, type, description };
+    const body: Record<string, any> = { amount, type, description };
     if (postId) body.postId = postId;
 
     const { data, error } = await supabase.functions.invoke('award-tokens', {
