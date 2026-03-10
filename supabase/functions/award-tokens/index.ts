@@ -40,9 +40,7 @@ serve(async (req) => {
       );
     }
 
-    const userId = claimsData.claims.sub as string;
-
-    // Use service role client for privileged operations
+    const callerUserId = claimsData.claims.sub as string;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { amount, type, description, postId } = await req.json();
@@ -50,21 +48,60 @@ serve(async (req) => {
     if (!amount || !type) {
       throw new Error('Missing required fields: amount, type');
     }
-
-    if (amount <= 0) {
-      throw new Error('Amount must be positive');
+    if (amount <= 0 || amount > 50) {
+      throw new Error('Invalid amount');
     }
 
-    console.log('Awarding tokens:', { userId, amount, type, description });
+    // Determine the target user: for "received" types, look up the content owner server-side
+    let targetUserId = callerUserId;
 
-    // Check daily earned amount
+    const receivedTypes = ['post_like_received', 'comment_received'];
+    if (receivedTypes.includes(type)) {
+      if (!postId) {
+        throw new Error('postId required for received-type awards');
+      }
+      // Look up the actual owner of the post/thread
+      const { data: post, error: postError } = await supabase
+        .from('posts')
+        .select('user_id')
+        .eq('id', postId)
+        .single();
+
+      if (postError || !post) {
+        // Try threads table
+        const { data: thread, error: threadError } = await supabase
+          .from('threads')
+          .select('user_id')
+          .eq('id', postId)
+          .single();
+
+        if (threadError || !thread) {
+          throw new Error('Content not found');
+        }
+        targetUserId = thread.user_id;
+      } else {
+        targetUserId = post.user_id;
+      }
+
+      // Don't award tokens to yourself
+      if (targetUserId === callerUserId) {
+        return new Response(
+          JSON.stringify({ success: true, awarded: 0, reason: 'self_interaction' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    console.log('Awarding tokens:', { targetUserId, amount, type, description });
+
+    // Check daily earned amount for target user
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
     const { data: todayTransactions, error: todayError } = await supabase
       .from('token_transactions')
       .select('amount')
-      .eq('user_id', userId)
+      .eq('user_id', targetUserId)
       .gt('amount', 0)
       .gte('created_at', today.toISOString());
 
@@ -74,37 +111,36 @@ serve(async (req) => {
 
     if (earnedToday >= DAILY_TOKEN_LIMIT) {
       return new Response(
-        JSON.stringify({ error: 'Daily token limit reached (100 tokens/day)', earnedToday, limit: DAILY_TOKEN_LIMIT }),
+        JSON.stringify({ error: 'Daily token limit reached', earnedToday, limit: DAILY_TOKEN_LIMIT }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Cap the award to not exceed daily limit
     const allowedAmount = Math.min(amount, DAILY_TOKEN_LIMIT - earnedToday);
 
     // Duplicate check for post-related actions
-    if (postId && (type === 'post_like_received' || type === 'comment_received')) {
+    if (postId && receivedTypes.includes(type)) {
       const { data: existing } = await supabase
         .from('token_transactions')
         .select('id')
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .eq('type', type)
         .eq('post_id', postId)
         .limit(1);
 
       if (existing && existing.length > 0) {
         return new Response(
-          JSON.stringify({ error: 'Tokens already awarded for this action', duplicate: true }),
-          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ success: true, awarded: 0, duplicate: true }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
     }
 
-    // Update user's token balance
+    // Update token balance
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('token_balance')
-      .eq('id', userId)
+      .eq('id', targetUserId)
       .single();
 
     if (profileError) throw profileError;
@@ -114,13 +150,13 @@ serve(async (req) => {
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ token_balance: newBalance })
-      .eq('id', userId);
+      .eq('id', targetUserId);
 
     if (updateError) throw updateError;
 
     // Create transaction record
     const insertData: any = {
-      user_id: userId,
+      user_id: targetUserId,
       amount: allowedAmount,
       type,
       description,
@@ -132,8 +168,6 @@ serve(async (req) => {
       .insert(insertData);
 
     if (transactionError) throw transactionError;
-
-    console.log('Tokens awarded successfully:', { allowedAmount, newBalance, earnedToday: earnedToday + allowedAmount });
 
     return new Response(
       JSON.stringify({ success: true, newBalance, awarded: allowedAmount, earnedToday: earnedToday + allowedAmount, limit: DAILY_TOKEN_LIMIT }),
