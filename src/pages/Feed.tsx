@@ -387,7 +387,7 @@ export default function Feed() {
                   onClick={() => navigate(`/posts/${post.id}`)}
                 >
                   <MessageCircle className="mr-2 h-4 w-4" />
-                  {post.comments_count}
+                  {post.comments_count || 0}
                 </Button>
                 <Button
                   variant="ghost"
