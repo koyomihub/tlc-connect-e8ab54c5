@@ -193,7 +193,7 @@ export default function Feed() {
 
     // Optimistic update
     setPosts(prev => prev.map(p => p.id === postId
-      ? { ...p, likes_count: isLiked ? Math.max(0, p.likes_count - 1) : p.likes_count + 1 }
+      ? { ...p, likes_count: Math.max(0, (p.likes_count || 0) - 1) }
       : p
     ));
 
