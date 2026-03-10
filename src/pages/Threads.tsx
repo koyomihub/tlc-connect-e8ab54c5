@@ -99,7 +99,7 @@ export default function Threads() {
         description: "Your discussion has been started.",
       });
       if (user) {
-        awardTokens({ amount: 5, type: 'thread_created', description: 'Created a new thread' });
+        awardTokens({ type: 'thread_created', description: 'Created a new thread' });
       }
     }
   };

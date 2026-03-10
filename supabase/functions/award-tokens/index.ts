@@ -8,6 +8,26 @@ const corsHeaders = {
 
 const DAILY_TOKEN_LIMIT = 100;
 
+// Server-side allowlist: type → fixed amount
+const ALLOWED_TYPES: Record<string, number> = {
+  daily_login: 10,
+  post_created: 5,
+  thread_created: 5,
+  comment_created: 3,
+  group_joined: 5,
+  post_like_received: 2,
+  comment_received: 2,
+};
+
+// Types that require a postId for dedup
+const POST_DEDUP_TYPES = ['post_like_received', 'comment_received', 'post_created', 'thread_created', 'comment_created'];
+
+// Types that are received by content owner (not the caller)
+const RECEIVED_TYPES = ['post_like_received', 'comment_received'];
+
+// Types with once-per-day dedup (no postId needed)
+const DAILY_DEDUP_TYPES = ['daily_login', 'group_joined'];
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -18,7 +38,7 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    // Validate JWT and extract real user ID
+    // Validate JWT
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
@@ -43,22 +63,28 @@ serve(async (req) => {
     const callerUserId = claimsData.claims.sub as string;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { amount, type, description, postId } = await req.json();
+    const { type, description, postId } = await req.json();
 
-    if (!amount || !type) {
-      throw new Error('Missing required fields: amount, type');
-    }
-    if (amount <= 0 || amount > 50) {
-      throw new Error('Invalid amount');
+    // Validate type against allowlist
+    if (!type || !(type in ALLOWED_TYPES)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or unknown action type' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Determine the target user: for "received" types, look up the content owner server-side
+    // Use server-defined amount, ignore any client-supplied amount
+    const amount = ALLOWED_TYPES[type];
+
+    // Determine target user
     let targetUserId = callerUserId;
 
-    const receivedTypes = ['post_like_received', 'comment_received'];
-    if (receivedTypes.includes(type)) {
+    if (RECEIVED_TYPES.includes(type)) {
       if (!postId) {
-        throw new Error('postId required for received-type awards');
+        return new Response(
+          JSON.stringify({ error: 'postId required for received-type awards' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
       // Look up the actual owner of the post/thread
       const { data: post, error: postError } = await supabase
@@ -68,7 +94,6 @@ serve(async (req) => {
         .single();
 
       if (postError || !post) {
-        // Try threads table
         const { data: thread, error: threadError } = await supabase
           .from('threads')
           .select('user_id')
@@ -76,7 +101,10 @@ serve(async (req) => {
           .single();
 
         if (threadError || !thread) {
-          throw new Error('Content not found');
+          return new Response(
+            JSON.stringify({ error: 'Content not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
         targetUserId = thread.user_id;
       } else {
@@ -92,12 +120,47 @@ serve(async (req) => {
       }
     }
 
-    console.log('Awarding tokens:', { targetUserId, amount, type, description });
-
-    // Check daily earned amount for target user
+    // Deduplication checks
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
+    // Post-based dedup: one award per (user, type, postId)
+    if (POST_DEDUP_TYPES.includes(type) && postId) {
+      const { data: existing } = await supabase
+        .from('token_transactions')
+        .select('id')
+        .eq('user_id', targetUserId)
+        .eq('type', type)
+        .eq('post_id', postId)
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        return new Response(
+          JSON.stringify({ success: true, awarded: 0, duplicate: true }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Daily dedup: one award per (user, type) per UTC day
+    if (DAILY_DEDUP_TYPES.includes(type)) {
+      const { data: existing } = await supabase
+        .from('token_transactions')
+        .select('id')
+        .eq('user_id', targetUserId)
+        .eq('type', type)
+        .gte('created_at', today.toISOString())
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        return new Response(
+          JSON.stringify({ success: true, awarded: 0, duplicate: true }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Check daily earned amount
     const { data: todayTransactions, error: todayError } = await supabase
       .from('token_transactions')
       .select('amount')
@@ -118,24 +181,6 @@ serve(async (req) => {
 
     const allowedAmount = Math.min(amount, DAILY_TOKEN_LIMIT - earnedToday);
 
-    // Duplicate check for post-related actions
-    if (postId && receivedTypes.includes(type)) {
-      const { data: existing } = await supabase
-        .from('token_transactions')
-        .select('id')
-        .eq('user_id', targetUserId)
-        .eq('type', type)
-        .eq('post_id', postId)
-        .limit(1);
-
-      if (existing && existing.length > 0) {
-        return new Response(
-          JSON.stringify({ success: true, awarded: 0, duplicate: true }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
     // Update token balance
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -155,11 +200,11 @@ serve(async (req) => {
     if (updateError) throw updateError;
 
     // Create transaction record
-    const insertData: any = {
+    const insertData: Record<string, unknown> = {
       user_id: targetUserId,
       amount: allowedAmount,
       type,
-      description,
+      description: description || type,
     };
     if (postId) insertData.post_id = postId;
 

@@ -1,1 +1,7 @@
 project_id = "nqeqggozwpagsatwgxdq"
+
+[functions.award-tokens]
+verify_jwt = false
+
+[functions.purchase-nft]
+verify_jwt = false
