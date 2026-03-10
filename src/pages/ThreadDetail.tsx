@@ -152,7 +152,7 @@ export default function ThreadDetail() {
 
       // Award tokens to thread owner
       if (thread && thread.user_id !== user.id) {
-        awardTokens({ amount: 2, type: 'post_like_received', description: 'Your thread received a like', postId: id });
+        awardTokens({ type: 'post_like_received', description: 'Your thread received a like', postId: id });
       }
     }
 
