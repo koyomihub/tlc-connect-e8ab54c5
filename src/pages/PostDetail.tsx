@@ -147,9 +147,9 @@ export default function PostDetail() {
       toast({ title: 'Comment posted!' });
 
       // Award tokens: commenter gets 3, post owner gets 2
-      awardTokens({ userId: user.id, amount: 3, type: 'comment_created', description: 'Commented on a post' });
+      awardTokens({ amount: 3, type: 'comment_created', description: 'Commented on a post' });
       if (post && post.user_id !== user.id) {
-        awardTokens({ userId: post.user_id, amount: 2, type: 'comment_received', description: 'Your post received a comment', postId: id });
+        awardTokens({ amount: 2, type: 'comment_received', description: 'Your post received a comment', postId: id });
       }
     }
   };
