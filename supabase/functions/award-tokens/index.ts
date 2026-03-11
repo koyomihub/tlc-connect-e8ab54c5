@@ -28,6 +28,9 @@ const RECEIVED_TYPES = ['post_like_received', 'comment_received'];
 // Types with once-per-day dedup (no postId needed)
 const DAILY_DEDUP_TYPES = ['daily_login', 'group_joined'];
 
+// Types that require a postId (all post-based types)
+const REQUIRES_POST_ID = ['post_created', 'thread_created', 'comment_created', 'post_like_received', 'comment_received'];
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -73,6 +76,14 @@ serve(async (req) => {
       );
     }
 
+    // Require postId for all post-based types
+    if (REQUIRES_POST_ID.includes(type) && !postId) {
+      return new Response(
+        JSON.stringify({ error: 'postId is required for this action type' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Use server-defined amount, ignore any client-supplied amount
     const amount = ALLOWED_TYPES[type];
 
@@ -80,12 +91,6 @@ serve(async (req) => {
     let targetUserId = callerUserId;
 
     if (RECEIVED_TYPES.includes(type)) {
-      if (!postId) {
-        return new Response(
-          JSON.stringify({ error: 'postId required for received-type awards' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
       // Look up the actual owner of the post/thread
       const { data: post, error: postError } = await supabase
         .from('posts')
@@ -118,6 +123,65 @@ serve(async (req) => {
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+    } else if (type === 'post_created') {
+      // Verify post exists and belongs to caller
+      const { data: post } = await supabase
+        .from('posts')
+        .select('id')
+        .eq('id', postId)
+        .eq('user_id', callerUserId)
+        .single();
+
+      if (!post) {
+        return new Response(
+          JSON.stringify({ error: 'Post not found or does not belong to you' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else if (type === 'thread_created') {
+      // Verify thread exists and belongs to caller
+      const { data: thread } = await supabase
+        .from('threads')
+        .select('id')
+        .eq('id', postId)
+        .eq('user_id', callerUserId)
+        .single();
+
+      if (!thread) {
+        return new Response(
+          JSON.stringify({ error: 'Thread not found or does not belong to you' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else if (type === 'comment_created') {
+      // Verify comment exists and belongs to caller
+      const { data: comment } = await supabase
+        .from('post_comments')
+        .select('id')
+        .eq('id', postId)
+        .eq('user_id', callerUserId)
+        .single();
+
+      if (!comment) {
+        return new Response(
+          JSON.stringify({ error: 'Comment not found or does not belong to you' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else if (type === 'group_joined') {
+      // Verify the user is actually a member of a group
+      const { data: membership } = await supabase
+        .from('group_members')
+        .select('id')
+        .eq('user_id', callerUserId)
+        .limit(1);
+
+      if (!membership || membership.length === 0) {
+        return new Response(
+          JSON.stringify({ error: 'You are not a member of any group' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Deduplication checks
@@ -125,7 +189,7 @@ serve(async (req) => {
     today.setUTCHours(0, 0, 0, 0);
 
     // Post-based dedup: one award per (user, type, postId)
-    if (POST_DEDUP_TYPES.includes(type) && postId) {
+    if (POST_DEDUP_TYPES.includes(type)) {
       const { data: existing } = await supabase
         .from('token_transactions')
         .select('id')
