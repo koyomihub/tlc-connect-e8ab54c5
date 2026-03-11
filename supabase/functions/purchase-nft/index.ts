@@ -50,85 +50,26 @@ serve(async (req) => {
       );
     }
 
-    // Fetch NFT item
-    const { data: nftItem, error: nftError } = await supabase
-      .from('nft_items')
-      .select('*')
-      .eq('id', nftItemId)
-      .single();
+    // Use atomic stored procedure to prevent race conditions
+    const { data: result, error: rpcError } = await supabase.rpc('purchase_nft_atomic', {
+      _user_id: userId,
+      _nft_item_id: nftItemId,
+    });
 
-    if (nftError || !nftItem) {
+    if (rpcError) throw rpcError;
+
+    if (result?.error) {
+      const status = result.error === 'NFT item not found' || result.error === 'User profile not found' ? 404
+        : result.error === 'Insufficient token balance' || result.error === 'NFT is sold out' ? 400
+        : 500;
       return new Response(
-        JSON.stringify({ error: 'NFT item not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify(result),
+        { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    if (nftItem.available_supply <= 0) {
-      return new Response(
-        JSON.stringify({ error: 'NFT is sold out' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Fetch user balance
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('token_balance')
-      .eq('id', userId)
-      .single();
-
-    if (profileError || !profile) {
-      return new Response(
-        JSON.stringify({ error: 'User profile not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const currentBalance = profile.token_balance || 0;
-    if (currentBalance < nftItem.price) {
-      return new Response(
-        JSON.stringify({ error: 'Insufficient token balance', required: nftItem.price, current: currentBalance }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Atomically: deduct tokens, insert user_nfts, decrement supply, record transaction
-    const newBalance = currentBalance - nftItem.price;
-
-    const { error: balanceError } = await supabase
-      .from('profiles')
-      .update({ token_balance: newBalance })
-      .eq('id', userId);
-
-    if (balanceError) throw balanceError;
-
-    const { error: nftInsertError } = await supabase
-      .from('user_nfts')
-      .insert({ user_id: userId, nft_item_id: nftItemId });
-
-    if (nftInsertError) throw nftInsertError;
-
-    const { error: supplyError } = await supabase
-      .from('nft_items')
-      .update({ available_supply: nftItem.available_supply - 1 })
-      .eq('id', nftItemId);
-
-    if (supplyError) throw supplyError;
-
-    const { error: txError } = await supabase
-      .from('token_transactions')
-      .insert({
-        user_id: userId,
-        amount: -nftItem.price,
-        type: 'nft_purchase',
-        description: `Purchased ${nftItem.name}`,
-      });
-
-    if (txError) throw txError;
 
     return new Response(
-      JSON.stringify({ success: true, newBalance, nftName: nftItem.name }),
+      JSON.stringify(result),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
