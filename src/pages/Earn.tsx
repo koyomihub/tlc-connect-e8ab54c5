@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Coins, TrendingUp, Award, Users, Heart, MessageCircle, Wallet, WalletCards, Unplug } from 'lucide-react';
+import { ClaimHistory } from '@/components/earn/ClaimHistory';
+import { OnChainBalance } from '@/components/earn/OnChainBalance';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
@@ -200,6 +202,7 @@ export default function Earn() {
                       <Unplug className="h-4 w-4 mr-1" /> Disconnect
                     </Button>
                   </div>
+                  <OnChainBalance />
                   <Button onClick={handleClaimToWallet} disabled={claiming || stats.balance === 0} variant="secondary" className="w-full">
                     <WalletCards className="h-4 w-4 mr-2" />
                     {claiming ? 'Claiming...' : 'Claim to Wallet'}
@@ -262,6 +265,9 @@ export default function Earn() {
             })}
           </div>
         </div>
+
+        {/* Claim History */}
+        <ClaimHistory />
 
         {/* Info Card */}
         <Card className="border-primary/20 bg-primary/5">
