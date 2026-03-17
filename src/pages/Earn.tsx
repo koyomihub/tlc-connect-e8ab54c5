@@ -266,6 +266,9 @@ export default function Earn() {
           </div>
         </div>
 
+        {/* Claim History */}
+        <ClaimHistory />
+
         {/* Info Card */}
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
