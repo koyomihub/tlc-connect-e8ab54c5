@@ -163,9 +163,26 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      toast({ title: "Claiming tokens...", description: "Processing your claim" });
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      toast({ title: "Tokens claimed!", description: `Successfully claimed ${amount} tokens` });
+      toast({ title: "Claiming tokens...", description: "Minting $TLC to your wallet on Polygon Amoy" });
+
+      const { data, error } = await supabase.functions.invoke('claim-tokens', {
+        body: { walletAddress: account },
+      });
+
+      if (error) {
+        toast({ title: "Claim failed", description: error.message, variant: "destructive" });
+        return false;
+      }
+
+      if (data?.error) {
+        toast({ title: "Claim failed", description: data.error, variant: "destructive" });
+        return false;
+      }
+
+      toast({
+        title: "Tokens claimed! 🎉",
+        description: `${amount} $TLC minted to your wallet. Tx: ${data.txHash?.slice(0, 10)}...`,
+      });
       return true;
     } catch (error: any) {
       toast({ title: "Claim failed", description: error.message, variant: "destructive" });
