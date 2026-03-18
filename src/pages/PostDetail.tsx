@@ -52,11 +52,26 @@ export default function PostDetail() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
-    if (id) {
-      fetchPost();
-      fetchComments();
-      checkLikeStatus();
-    }
+    if (!id) return;
+
+    fetchPost();
+    fetchComments();
+    checkLikeStatus();
+
+    const channel = supabase
+      .channel(`post-detail-${id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'posts', filter: `id=eq.${id}` },
+        (payload) => {
+          setPost((prev) => prev ? { ...prev, ...(payload.new as Partial<Post>) } : prev);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id, user]);
 
   const fetchPost = async () => {
@@ -106,25 +121,34 @@ export default function PostDetail() {
   const toggleLike = async () => {
     if (!user) return;
 
-    if (isLiked) {
-      await supabase
-        .from('post_likes')
-        .delete()
-        .eq('post_id', id)
-        .eq('user_id', user.id);
-    } else {
-      await supabase
-        .from('post_likes')
-        .insert({ post_id: id, user_id: user.id });
+    try {
+      if (isLiked) {
+        const { error } = await supabase
+          .from('post_likes')
+          .delete()
+          .eq('post_id', id)
+          .eq('user_id', user.id);
 
-      // Award tokens to the post owner
-      if (post && post.user_id !== user.id) {
-        awardTokens({ type: 'post_like_received', description: 'Your post received a like', postId: id });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('post_likes')
+          .insert({ post_id: id, user_id: user.id });
+
+        if (error) throw error;
+
+        if (post && post.user_id !== user.id) {
+          awardTokens({ type: 'post_like_received', description: 'Your post received a like', postId: id });
+        }
       }
-    }
 
-    setIsLiked(!isLiked);
-    fetchPost();
+      setIsLiked(!isLiked);
+      fetchPost();
+    } catch (error: any) {
+      toast({ title: 'Error updating reaction', description: error.message, variant: 'destructive' });
+      fetchPost();
+      checkLikeStatus();
+    }
   };
 
   const createComment = async () => {
@@ -139,15 +163,13 @@ export default function PostDetail() {
       });
 
     if (error) {
-      toast({ title: 'Error posting comment', variant: 'destructive' });
+      toast({ title: 'Error posting comment', description: error.message, variant: 'destructive' });
     } else {
       setNewComment('');
       fetchComments();
       fetchPost();
       toast({ title: 'Comment posted!' });
 
-      // Award tokens: commenter gets 3, post owner gets 2
-      awardTokens({ type: 'comment_created', description: 'Commented on a post' });
       if (post && post.user_id !== user.id) {
         awardTokens({ type: 'comment_received', description: 'Your post received a comment', postId: id });
       }
@@ -161,7 +183,7 @@ export default function PostDetail() {
       .eq('id', commentId);
 
     if (error) {
-      toast({ title: 'Error deleting comment', variant: 'destructive' });
+      toast({ title: 'Error deleting comment', description: error.message, variant: 'destructive' });
     } else {
       fetchComments();
       fetchPost();
@@ -178,7 +200,7 @@ export default function PostDetail() {
       .eq('id', id);
 
     if (error) {
-      toast({ title: 'Error deleting post', variant: 'destructive' });
+      toast({ title: 'Error deleting post', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Post deleted' });
       navigate('/');
