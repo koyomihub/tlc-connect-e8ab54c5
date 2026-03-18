@@ -208,42 +208,49 @@ export default function Feed() {
 
     const isLiked = likedPosts.has(postId);
 
-    if (isLiked) {
-      await supabase
-        .from('post_likes')
-        .delete()
-        .eq('post_id', postId)
-        .eq('user_id', user.id);
+    try {
+      if (isLiked) {
+        const { error } = await supabase
+          .from('post_likes')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', user.id);
 
-    // Optimistic update
-    setPosts(prev => prev.map(p => p.id === postId
-      ? { ...p, likes_count: Math.max(0, (p.likes_count || 0) - 1) }
-      : p
-    ));
+        if (error) throw error;
 
-    setLikedPosts(prev => {
-        const newSet = new Set(prev);
-        if (isLiked) newSet.delete(postId); else newSet.add(postId);
-        return newSet;
-      });
-    } else {
-      await supabase
-        .from('post_likes')
-        .insert({ post_id: postId, user_id: user.id });
+        setPosts(prev => prev.map(p => p.id === postId
+          ? { ...p, likes_count: Math.max(0, (p.likes_count || 0) - 1) }
+          : p
+        ));
 
-      // Optimistic update
-      setPosts(prev => prev.map(p => p.id === postId
-        ? { ...p, likes_count: (p.likes_count || 0) + 1 }
-        : p
-      ));
+        setLikedPosts(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(postId);
+          return newSet;
+        });
+      } else {
+        const { error } = await supabase
+          .from('post_likes')
+          .insert({ post_id: postId, user_id: user.id });
 
-      setLikedPosts(prev => new Set(prev).add(postId));
+        if (error) throw error;
 
-      // Award tokens to the post owner
-      const post = posts.find(p => p.id === postId);
-      if (post && post.user_id !== user.id) {
-        awardTokens({ type: 'post_like_received', description: 'Your post received a like', postId });
+        setPosts(prev => prev.map(p => p.id === postId
+          ? { ...p, likes_count: (p.likes_count || 0) + 1 }
+          : p
+        ));
+
+        setLikedPosts(prev => new Set(prev).add(postId));
+
+        const post = posts.find(p => p.id === postId);
+        if (post && post.user_id !== user.id) {
+          awardTokens({ type: 'post_like_received', description: 'Your post received a like', postId });
+        }
       }
+    } catch (error: any) {
+      toast({ title: 'Error updating reaction', description: error.message, variant: 'destructive' });
+      fetchPosts();
+      fetchLikedPosts();
     }
   };
 

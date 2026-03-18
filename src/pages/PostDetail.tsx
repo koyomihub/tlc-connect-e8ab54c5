@@ -200,7 +200,7 @@ export default function PostDetail() {
       .eq('id', id);
 
     if (error) {
-      toast({ title: 'Error deleting post', variant: 'destructive' });
+      toast({ title: 'Error deleting post', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Post deleted' });
       navigate('/');
