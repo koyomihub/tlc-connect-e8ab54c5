@@ -183,7 +183,7 @@ export default function PostDetail() {
       .eq('id', commentId);
 
     if (error) {
-      toast({ title: 'Error deleting comment', variant: 'destructive' });
+      toast({ title: 'Error deleting comment', description: error.message, variant: 'destructive' });
     } else {
       fetchComments();
       fetchPost();
