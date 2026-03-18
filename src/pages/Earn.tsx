@@ -268,8 +268,14 @@ export default function Earn() {
           </div>
         </div>
 
+        {/* Leaderboard */}
+        <Leaderboard />
+
         {/* Claim History */}
         <ClaimHistory />
+
+        {/* How To Guide */}
+        <HowToGuide />
 
         {/* Info Card */}
         <Card className="border-primary/20 bg-primary/5">
