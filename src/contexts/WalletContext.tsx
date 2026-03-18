@@ -102,10 +102,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     setConnecting(true);
     try {
+      // Use wallet_requestPermissions to force the account chooser dialog
       const provider = new ethers.BrowserProvider(window.ethereum);
-      await provider.send('eth_requestAccounts', []);
-      const signer = await provider.getSigner();
-      const address = await signer.getAddress();
+      await window.ethereum.request({
+        method: 'wallet_requestPermissions',
+        params: [{ eth_accounts: {} }],
+      });
+      const accounts = await provider.send('eth_requestAccounts', []);
+      const address = accounts[0];
       setAccount(address);
 
       const network = await provider.getNetwork();
