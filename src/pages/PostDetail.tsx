@@ -163,15 +163,13 @@ export default function PostDetail() {
       });
 
     if (error) {
-      toast({ title: 'Error posting comment', variant: 'destructive' });
+      toast({ title: 'Error posting comment', description: error.message, variant: 'destructive' });
     } else {
       setNewComment('');
       fetchComments();
       fetchPost();
       toast({ title: 'Comment posted!' });
 
-      // Award tokens: commenter gets 3, post owner gets 2
-      awardTokens({ type: 'comment_created', description: 'Commented on a post' });
       if (post && post.user_id !== user.id) {
         awardTokens({ type: 'comment_received', description: 'Your post received a comment', postId: id });
       }
