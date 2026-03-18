@@ -121,25 +121,34 @@ export default function PostDetail() {
   const toggleLike = async () => {
     if (!user) return;
 
-    if (isLiked) {
-      await supabase
-        .from('post_likes')
-        .delete()
-        .eq('post_id', id)
-        .eq('user_id', user.id);
-    } else {
-      await supabase
-        .from('post_likes')
-        .insert({ post_id: id, user_id: user.id });
+    try {
+      if (isLiked) {
+        const { error } = await supabase
+          .from('post_likes')
+          .delete()
+          .eq('post_id', id)
+          .eq('user_id', user.id);
 
-      // Award tokens to the post owner
-      if (post && post.user_id !== user.id) {
-        awardTokens({ type: 'post_like_received', description: 'Your post received a like', postId: id });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('post_likes')
+          .insert({ post_id: id, user_id: user.id });
+
+        if (error) throw error;
+
+        if (post && post.user_id !== user.id) {
+          awardTokens({ type: 'post_like_received', description: 'Your post received a like', postId: id });
+        }
       }
-    }
 
-    setIsLiked(!isLiked);
-    fetchPost();
+      setIsLiked(!isLiked);
+      fetchPost();
+    } catch (error: any) {
+      toast({ title: 'Error updating reaction', description: error.message, variant: 'destructive' });
+      fetchPost();
+      checkLikeStatus();
+    }
   };
 
   const createComment = async () => {
