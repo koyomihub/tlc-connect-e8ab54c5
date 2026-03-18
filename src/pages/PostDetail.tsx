@@ -52,11 +52,26 @@ export default function PostDetail() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
-    if (id) {
-      fetchPost();
-      fetchComments();
-      checkLikeStatus();
-    }
+    if (!id) return;
+
+    fetchPost();
+    fetchComments();
+    checkLikeStatus();
+
+    const channel = supabase
+      .channel(`post-detail-${id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'posts', filter: `id=eq.${id}` },
+        (payload) => {
+          setPost((prev) => prev ? { ...prev, ...(payload.new as Partial<Post>) } : prev);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id, user]);
 
   const fetchPost = async () => {

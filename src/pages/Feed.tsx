@@ -41,12 +41,36 @@ export default function Feed() {
   const [userProfile, setUserProfile] = useState<{ avatar_url?: string; display_name?: string } | null>(null);
 
   useEffect(() => {
-    if (user) {
-      fetchPosts();
-      fetchLikedPosts();
-      fetchRepostedPosts();
-      fetchUserProfile();
-    }
+    if (!user) return;
+
+    fetchPosts();
+    fetchLikedPosts();
+    fetchRepostedPosts();
+    fetchUserProfile();
+
+    const channel = supabase
+      .channel(`feed-posts-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'posts' },
+        (payload) => {
+          const updatedPost = payload.new as Partial<Post> & { id: string };
+          setPosts((prev) => prev.map((post) =>
+            post.id === updatedPost.id
+              ? {
+                  ...post,
+                  likes_count: updatedPost.likes_count ?? post.likes_count,
+                  comments_count: updatedPost.comments_count ?? post.comments_count,
+                }
+              : post
+          ));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const fetchUserProfile = async () => {
