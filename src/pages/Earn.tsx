@@ -29,7 +29,22 @@ export default function Earn() {
   const [stats, setStats] = useState<TokenStats>({ balance: 0, earnedToday: 0, totalEarned: 0, rank: 0 });
   const [claiming, setClaiming] = useState(false);
   const [claimingLogin, setClaimingLogin] = useState(false);
+  const [dailyLoginClaimed, setDailyLoginClaimed] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const checkDailyLoginClaimed = useCallback(async () => {
+    if (!user) return;
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const { data } = await supabase
+      .from('token_transactions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('type', 'daily_login')
+      .gte('created_at', today.toISOString())
+      .limit(1);
+    setDailyLoginClaimed(!!(data && data.length > 0));
+  }, [user]);
 
   const fetchTokenStats = useCallback(async () => {
     if (!user) return;
@@ -58,8 +73,8 @@ export default function Earn() {
 
   useEffect(() => {
     fetchTokenStats();
+    checkDailyLoginClaimed();
 
-    // Subscribe to real-time balance changes
     if (!user) return;
     const channel = supabase
       .channel('token-balance')
@@ -73,13 +88,13 @@ export default function Earn() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, fetchTokenStats]);
+  }, [user, fetchTokenStats, checkDailyLoginClaimed]);
 
   const awardTokens = async (amount: number, type: string, description: string, postId?: string) => {
     if (!user) return false;
 
     try {
-      const body: any = { userId: user.id, amount, type, description };
+      const body: any = { type, description };
       if (postId) body.postId = postId;
 
       const { data, error } = await supabase.functions.invoke('award-tokens', { body });
@@ -103,29 +118,13 @@ export default function Earn() {
   };
 
   const handleClaimDailyLogin = async () => {
-    if (!user) return;
+    if (!user || dailyLoginClaimed) return;
     setClaimingLogin(true);
-
-    // Check if already claimed today
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-    const { data: existing } = await supabase
-      .from('token_transactions')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('type', 'daily_login')
-      .gte('created_at', today.toISOString())
-      .limit(1);
-
-    if (existing && existing.length > 0) {
-      toast({ title: 'Already claimed', description: 'You already claimed your daily login bonus today' });
-      setClaimingLogin(false);
-      return;
-    }
 
     const success = await awardTokens(5, 'daily_login', 'Daily login bonus');
     if (success) {
       toast({ title: '+5 Tokens!', description: 'Daily login bonus claimed' });
+      setDailyLoginClaimed(true);
     }
     setClaimingLogin(false);
   };
@@ -145,11 +144,11 @@ export default function Earn() {
   const remaining = Math.max(0, DAILY_LIMIT - stats.earnedToday);
 
   const activities = [
-    { type: 'Post', points: 10, description: 'Share a post on your feed', icon: MessageCircle },
-    { type: 'Get Likes', points: 5, description: 'Receive likes from others (not your own)', icon: Heart },
+    { type: 'Post', points: 5, description: 'Share a post on your feed (max 3/day)', icon: MessageCircle },
+    { type: 'Get Likes', points: 2, description: 'Receive likes from others (not your own)', icon: Heart },
     { type: 'Comment', points: 3, description: "Engage with others' posts", icon: MessageCircle },
-    { type: 'Join Group', points: 20, description: 'Become a member of a group', icon: Users },
-    { type: 'Daily Login', points: 5, description: 'Log in every day to earn', icon: Award, action: handleClaimDailyLogin, loading: claimingLogin },
+    { type: 'Join Group', points: 5, description: 'Become a member of a group (max 1/week)', icon: Users },
+    { type: 'Daily Login', points: 10, description: 'Log in every day to earn', icon: Award, action: dailyLoginClaimed ? undefined : handleClaimDailyLogin, loading: claimingLogin, claimed: dailyLoginClaimed },
   ];
 
   return (
