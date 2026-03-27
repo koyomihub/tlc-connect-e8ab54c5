@@ -255,11 +255,15 @@ export default function Earn() {
                   <CardContent>
                     <h3 className="font-semibold mb-1">{activity.type}</h3>
                     <p className="text-sm text-muted-foreground mb-3">{activity.description}</p>
-                    {activity.action && (
+                    {activity.claimed ? (
+                      <Button size="sm" disabled className="w-full opacity-60">
+                        Claimed
+                      </Button>
+                    ) : activity.action ? (
                       <Button size="sm" onClick={activity.action} disabled={activity.loading || stats.earnedToday >= DAILY_LIMIT} className="w-full">
                         {activity.loading ? 'Claiming...' : 'Claim'}
                       </Button>
-                    )}
+                    ) : null}
                   </CardContent>
                 </Card>
               );
