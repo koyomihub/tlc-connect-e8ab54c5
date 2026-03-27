@@ -177,14 +177,16 @@ export default function Feed() {
         imageUrls = await uploadImages();
       }
 
-      const { error } = await supabase
+      const { data: newPostData, error } = await supabase
         .from('posts')
         .insert({
           user_id: user.id,
           content: newPost.trim(),
-          image_url: imageUrls[0] || null, // Keep backward compatibility
+          image_url: imageUrls[0] || null,
           image_urls: imageUrls,
-        });
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
 
@@ -194,7 +196,9 @@ export default function Feed() {
       if (fileInputRef.current) fileInputRef.current.value = '';
       fetchPosts();
       toast({ title: 'Post created!', description: 'Your post has been shared' });
-      awardTokens({ type: 'post_created', description: 'Created a new post' });
+      if (newPostData?.id) {
+        awardTokens({ type: 'post_created', description: 'Created a new post', postId: newPostData.id });
+      }
     } catch (error: any) {
       console.error('Error creating post:', error);
       toast({ title: 'Error creating post', description: error.message, variant: 'destructive' });

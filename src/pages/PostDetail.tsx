@@ -154,13 +154,15 @@ export default function PostDetail() {
   const createComment = async () => {
     if (!newComment.trim() || !user) return;
 
-    const { error } = await supabase
+    const { data: commentData, error } = await supabase
       .from('post_comments')
       .insert({
         post_id: id,
         user_id: user.id,
         content: newComment.trim(),
-      });
+      })
+      .select('id')
+      .single();
 
     if (error) {
       toast({ title: 'Error posting comment', description: error.message, variant: 'destructive' });
@@ -170,6 +172,12 @@ export default function PostDetail() {
       fetchPost();
       toast({ title: 'Comment posted!' });
 
+      // Award commenter for creating a comment
+      if (commentData?.id) {
+        awardTokens({ type: 'comment_created', description: 'Created a comment', postId: commentData.id });
+      }
+
+      // Award post owner for receiving a comment
       if (post && post.user_id !== user.id) {
         awardTokens({ type: 'comment_received', description: 'Your post received a comment', postId: id });
       }
