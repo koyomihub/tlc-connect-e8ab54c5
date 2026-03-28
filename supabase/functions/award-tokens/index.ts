@@ -67,7 +67,7 @@ serve(async (req) => {
     const callerUserId = authUser.id;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { type, description, postId } = await req.json();
+    const { type, description, postId, parentPostId } = await req.json();
 
     if (!type || !(type in ALLOWED_TYPES)) {
       return new Response(

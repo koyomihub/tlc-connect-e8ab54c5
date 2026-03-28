@@ -172,9 +172,9 @@ export default function PostDetail() {
       fetchPost();
       toast({ title: 'Comment posted!' });
 
-      // Award commenter for creating a comment
+      // Award commenter for creating a comment — pass comment ID for dedup
       if (commentData?.id) {
-        awardTokens({ type: 'comment_created', description: 'Created a comment', postId: commentData.id });
+        awardTokens({ type: 'comment_created', description: 'Created a comment', postId: commentData.id, parentPostId: id });
       }
 
       // Award post owner for receiving a comment
