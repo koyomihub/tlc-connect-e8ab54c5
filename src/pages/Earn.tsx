@@ -87,7 +87,20 @@ export default function Earn() {
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    const txChannel = supabase
+      .channel('token-transactions')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'token_transactions', filter: `user_id=eq.${user.id}` },
+        () => {
+          fetchTokenStats();
+          checkDailyLoginClaimed();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      supabase.removeChannel(txChannel);
+    };
   }, [user, fetchTokenStats, checkDailyLoginClaimed]);
 
   const awardTokens = async (amount: number, type: string, description: string, postId?: string) => {
