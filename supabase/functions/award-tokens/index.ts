@@ -194,7 +194,9 @@ serve(async (req) => {
     const insertData: Record<string, unknown> = {
       user_id: targetUserId, amount: allowedAmount, type, description: description || type,
     };
-    if (postId) insertData.post_id = postId;
+    // For comment_created, store the parent post_id (valid FK) instead of the comment id
+    const storablePostId = type === 'comment_created' && parentPostId ? parentPostId : postId;
+    if (storablePostId) insertData.post_id = storablePostId;
 
     const { error: transactionError } = await supabase.from('token_transactions').insert(insertData);
     if (transactionError) throw transactionError;
