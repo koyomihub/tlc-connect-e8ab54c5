@@ -4,12 +4,14 @@ interface AwardTokensParams {
   type: string;
   description: string;
   postId?: string;
+  parentPostId?: string;
 }
 
-export async function awardTokens({ type, description, postId }: AwardTokensParams) {
+export async function awardTokens({ type, description, postId, parentPostId }: AwardTokensParams) {
   try {
     const body: Record<string, string> = { type, description };
     if (postId) body.postId = postId;
+    if (parentPostId) body.parentPostId = parentPostId;
 
     const { data, error } = await supabase.functions.invoke('award-tokens', {
       body,
