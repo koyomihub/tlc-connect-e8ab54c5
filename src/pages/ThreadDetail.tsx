@@ -50,25 +50,12 @@ export default function ThreadDetail() {
   const trackView = async () => {
     if (!user || !id) return;
     
-    // Insert view only if it doesn't exist
+    // Insert view - trigger automatically updates views_count
     await supabase
       .from('thread_views')
       .insert({ thread_id: id, user_id: user.id })
       .select()
       .maybeSingle();
-
-    // Update views count
-    const { data: viewsData } = await supabase
-      .from('thread_views')
-      .select('id', { count: 'exact' })
-      .eq('thread_id', id);
-
-    if (viewsData) {
-      await supabase
-        .from('threads')
-        .update({ views_count: viewsData.length })
-        .eq('id', id);
-    }
   };
 
   const fetchThread = async () => {
