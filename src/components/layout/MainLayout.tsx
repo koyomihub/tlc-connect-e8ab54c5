@@ -1,8 +1,9 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/NotificationBell';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Home,
   MessageSquare,
@@ -21,9 +22,16 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' })
+      .then(({ data }) => setIsAdmin(!!data));
+  }, [user]);
 
   const menuItems = [
     { path: '/feed', label: 'Feed', icon: Home },
@@ -71,9 +79,11 @@ export function MainLayout({ children }: MainLayoutProps) {
           <div className="flex items-center space-x-2">
             <NotificationBell />
             
-            <Button variant="ghost" size="icon" onClick={() => navigate('/admin')}>
-              <Shield className="h-5 w-5" />
-            </Button>
+            {isAdmin && (
+              <Button variant="ghost" size="icon" onClick={() => navigate('/admin')}>
+                <Shield className="h-5 w-5" />
+              </Button>
+            )}
 
             <Button variant="ghost" size="icon" onClick={() => navigate('/profile')}>
               <User className="h-5 w-5" />
