@@ -181,7 +181,7 @@ export default function Earn() {
         </div>
 
         {/* Balance Card */}
-        <Card className="shadow-lg bg-gradient-accent">
+        <Card className="shadow-lg bg-gradient-primary">
           <CardHeader>
             <CardTitle className="flex items-center text-white">
               <Coins className="h-6 w-6 mr-2" />
