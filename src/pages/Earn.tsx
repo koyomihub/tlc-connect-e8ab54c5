@@ -61,7 +61,7 @@ export default function Earn() {
       supabase.from('token_transactions').select('amount').eq('user_id', user.id).gt('amount', 0),
       supabase.from('profiles').select('id').order('token_balance', { ascending: false }),
       supabase.from('token_transactions').select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id).eq('type', 'post').gte('created_at', todayISO),
+        .eq('user_id', user.id).eq('type', 'post_created').gte('created_at', todayISO),
     ]);
 
     const earnedToday = todayRes.data?.reduce((sum, t) => sum + t.amount, 0) || 0;
