@@ -9,7 +9,7 @@ import { Users, Plus, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Groups() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [groups, setGroups] = useState<any[]>([]);
   const [myGroups, setMyGroups] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,23 +114,30 @@ export default function Groups() {
     }
 
     // Add creator as admin member
-    await supabase
+    const { error: memberError } = await supabase
       .from('group_members')
       .insert({
         group_id: groupData.id,
         user_id: user?.id,
         is_admin: true,
+      } as any);
+
+    if (memberError) {
+      toast({
+        title: "Joined partially",
+        description: memberError.message,
+        variant: "destructive",
       });
+    }
 
     toast({
       title: "Group created!",
-      description: "Your group has been created successfully",
+      description: "Redirecting to your new group...",
     });
 
     setNewGroup({ name: '', description: '', privacy: 'public' });
     setDialogOpen(false);
-    fetchGroups();
-    fetchMyGroups();
+    navigate(`/groups/${groupData.id}`);
   };
 
   const sortGroups = (groupsList: any[]) => {
