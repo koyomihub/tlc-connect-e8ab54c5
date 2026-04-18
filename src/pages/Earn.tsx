@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Coins, TrendingUp, Award, Users, Heart, MessageCircle, Wallet, WalletCards, Unplug } from 'lucide-react';
 import { ClaimHistory } from '@/components/earn/ClaimHistory';
 import { OnChainBalance } from '@/components/earn/OnChainBalance';
-import { Leaderboard } from '@/components/earn/Leaderboard';
+
 import { HowToGuide } from '@/components/earn/HowToGuide';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -298,9 +298,6 @@ export default function Earn() {
             })}
           </div>
         </div>
-
-        {/* Leaderboard */}
-        <Leaderboard />
 
         {/* Claim History */}
         <ClaimHistory />
