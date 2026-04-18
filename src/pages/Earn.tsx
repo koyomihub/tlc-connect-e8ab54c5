@@ -176,7 +176,7 @@ export default function Earn() {
     <MainLayout>
       <div className="max-w-6xl mx-auto space-y-6">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-accent bg-clip-text text-transparent">Earn Tokens</h1>
+          <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Earn Tokens</h1>
           <p className="text-muted-foreground mt-1">Participate in the community and earn TLC tokens</p>
         </div>
 
