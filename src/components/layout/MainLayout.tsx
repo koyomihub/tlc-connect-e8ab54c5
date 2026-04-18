@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/NotificationBell';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -78,6 +79,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
           <div className="flex items-center space-x-2">
             <NotificationBell />
+            <ThemeToggle />
             
             {isAdmin && (
               <Button variant="ghost" size="icon" onClick={() => navigate('/admin')}>
