@@ -15,6 +15,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { toast } from '@/hooks/use-toast';
 
 const DAILY_LIMIT = 100;
+const POST_DAILY_CAP = 3;
 
 interface TokenStats {
   balance: number;
@@ -27,6 +28,7 @@ export default function Earn() {
   const { user } = useAuth();
   const { account, connectWallet, disconnectWallet, claimTokens, connecting } = useWallet();
   const [stats, setStats] = useState<TokenStats>({ balance: 0, earnedToday: 0, totalEarned: 0, rank: 0 });
+  const [postsToday, setPostsToday] = useState(0);
   const [claiming, setClaiming] = useState(false);
   const [claimingLogin, setClaimingLogin] = useState(false);
   const [dailyLoginClaimed, setDailyLoginClaimed] = useState(false);
@@ -49,13 +51,17 @@ export default function Earn() {
   const fetchTokenStats = useCallback(async () => {
     if (!user) return;
 
-    const [profileRes, todayRes, allRes, rankRes] = await Promise.all([
+    const todayISO = new Date(new Date().setUTCHours(0, 0, 0, 0)).toISOString();
+
+    const [profileRes, todayRes, allRes, rankRes, postsRes] = await Promise.all([
       supabase.from('profiles').select('token_balance').eq('id', user.id).single(),
       supabase.from('token_transactions').select('amount').eq('user_id', user.id)
         .gt('amount', 0)
-        .gte('created_at', new Date(new Date().setUTCHours(0, 0, 0, 0)).toISOString()),
+        .gte('created_at', todayISO),
       supabase.from('token_transactions').select('amount').eq('user_id', user.id).gt('amount', 0),
       supabase.from('profiles').select('id').order('token_balance', { ascending: false }),
+      supabase.from('token_transactions').select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id).eq('type', 'post').gte('created_at', todayISO),
     ]);
 
     const earnedToday = todayRes.data?.reduce((sum, t) => sum + t.amount, 0) || 0;
@@ -68,6 +74,7 @@ export default function Earn() {
       totalEarned,
       rank: rankIndex >= 0 ? rankIndex + 1 : 0,
     });
+    setPostsToday(postsRes.count || 0);
     setLoading(false);
   }, [user]);
 
@@ -156,8 +163,9 @@ export default function Earn() {
   const dailyProgress = Math.min(100, (stats.earnedToday / DAILY_LIMIT) * 100);
   const remaining = Math.max(0, DAILY_LIMIT - stats.earnedToday);
 
+  const postCapReached = postsToday >= POST_DAILY_CAP;
   const activities = [
-    { type: 'Post', points: 5, description: 'Share a post on your feed (max 3/day)', icon: MessageCircle },
+    { type: 'Post', points: 5, description: `Share a post on your feed (${postsToday}/${POST_DAILY_CAP} today)`, icon: MessageCircle, maxed: postCapReached },
     { type: 'Get Likes', points: 2, description: 'Receive likes from others (not your own)', icon: Heart },
     { type: 'Comment', points: 3, description: "Engage with others' posts", icon: MessageCircle },
     { type: 'Join Group', points: 5, description: 'Become a member of a group (max 1/week)', icon: Users },
@@ -256,19 +264,26 @@ export default function Earn() {
             {activities.map((activity) => {
               const Icon = activity.icon;
               return (
-                <Card key={activity.type} className="hover:shadow-lg transition-shadow">
+                <Card key={activity.type} className={`hover:shadow-lg transition-shadow ${activity.maxed ? 'opacity-75 border-warning/40' : ''}`}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center">
                         <Icon className="h-6 w-6 text-success" />
                       </div>
-                      <Badge variant="secondary" className="text-lg font-bold">+{activity.points}</Badge>
+                      <div className="flex items-center gap-2">
+                        {activity.maxed && (
+                          <Badge variant="destructive" className="font-semibold">Maxed today</Badge>
+                        )}
+                        <Badge variant="secondary" className="text-lg font-bold">+{activity.points}</Badge>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <h3 className="font-semibold mb-1">{activity.type}</h3>
                     <p className="text-sm text-muted-foreground mb-3">{activity.description}</p>
-                    {activity.claimed ? (
+                    {activity.maxed ? (
+                      <p className="text-xs text-warning font-medium">Daily cap reached. Resets at 00:00 UTC.</p>
+                    ) : activity.claimed ? (
                       <Button size="sm" disabled className="w-full opacity-60">
                         Claimed
                       </Button>
