@@ -487,8 +487,17 @@ export default function Feed() {
         })}
 
         {posts.length === 0 && (
-          <Card className="p-12 text-center">
-            <p className="text-muted-foreground">No posts yet. Be the first to share!</p>
+          <Card className="p-12 text-center space-y-2">
+            <p className="text-muted-foreground">
+              {followingIds.length === 0
+                ? "Your feed is empty. Follow people to see their posts here!"
+                : "No posts from people you follow yet."}
+            </p>
+            {followingIds.length === 0 && (
+              <Button variant="outline" onClick={() => navigate('/people')}>
+                Discover People
+              </Button>
+            )}
           </Card>
         )}
       </div>
