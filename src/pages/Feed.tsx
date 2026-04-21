@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Heart, MessageCircle, Send, Image as ImageIcon, X, Repeat2 } from 'lucide-react';
+import { Heart, MessageCircle, Send, Image as ImageIcon, X, Repeat2, Newspaper } from 'lucide-react';
 import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -293,6 +293,15 @@ export default function Feed() {
   return (
     <MainLayout>
       <div className="max-w-2xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center bg-gradient-primary bg-clip-text text-transparent">
+            <Newspaper className="h-8 w-8 mr-2 text-primary" />
+            Feed
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            See what's happening in your community
+          </p>
+        </div>
         <Card className="p-6 mb-6">
           <div className="flex items-start space-x-3">
             <Avatar>
