@@ -10,7 +10,7 @@ const checklistSteps = [
   {
     id: 'create-public',
     label: 'Create one Public post',
-    helper: 'It should be visible to everyone.',
+    helper: 'It should be visible to everyone on your profile and post detail page.',
   },
   {
     id: 'create-followers',
@@ -20,22 +20,22 @@ const checklistSteps = [
   {
     id: 'verify-own-feed',
     label: 'Confirm both posts appear on your Feed',
-    helper: 'You should always see your own posts.',
+    helper: 'You should always see your own posts there.',
   },
   {
     id: 'open-second-user',
     label: 'Open a second account that does not follow you',
-    helper: 'Use People to open your profile or return to Feed.',
+    helper: 'From People, open your profile while still not following.',
   },
   {
     id: 'verify-public-non-follower',
-    label: 'Confirm the second account sees only your Public post',
-    helper: 'Your Followers post should stay hidden here.',
+    label: 'Confirm the second account sees only your Public post on your profile',
+    helper: 'Your Followers post should stay hidden before they follow you.',
   },
   {
     id: 'verify-followers-after-follow',
-    label: 'After following you, confirm the Followers post appears',
-    helper: 'This verifies follower-only visibility.',
+    label: 'After following you, confirm the Followers post appears on your profile',
+    helper: 'This verifies follower-only visibility is working.',
   },
 ] as const;
 
