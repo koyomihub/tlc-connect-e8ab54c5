@@ -107,8 +107,6 @@ export default function Feed() {
     const followedIds = (followsData || []).map((f) => f.following_id);
     setFollowingIds(followedIds);
 
-    const visibleUserIds = Array.from(new Set([...followedIds, user.id]));
-
     const { data, error } = await supabase
       .from('posts')
       .select(`
@@ -116,7 +114,7 @@ export default function Feed() {
         profiles!posts_user_id_fkey (display_name, avatar_url)
       `)
       .eq('is_hidden', false)
-      .in('user_id', visibleUserIds)
+      .or(`user_id.eq.${user.id},privacy.eq.public,and(privacy.eq.friends,user_id.in.(${followedIds.length ? followedIds.join(',') : '00000000-0000-0000-0000-000000000000'}))`)
       .order('created_at', { ascending: false });
 
     if (error) {
