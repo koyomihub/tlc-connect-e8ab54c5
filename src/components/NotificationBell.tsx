@@ -11,9 +11,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 export function NotificationBell() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -70,6 +72,15 @@ export function NotificationBell() {
     fetchNotifications();
   };
 
+  const handleClick = async (notification: any) => {
+    if (!notification.is_read) {
+      await markAsRead(notification.id);
+    }
+    if (notification.post_id) {
+      navigate(`/posts/${notification.post_id}`);
+    }
+  };
+
   const markAllAsRead = async () => {
     await supabase
       .from('notifications')
@@ -114,7 +125,7 @@ export function NotificationBell() {
                   className={`p-4 hover:bg-accent cursor-pointer transition-colors ${
                     !notification.is_read ? 'bg-accent/50' : ''
                   }`}
-                  onClick={() => markAsRead(notification.id)}
+                  onClick={() => handleClick(notification)}
                 >
                   <div className="flex items-start space-x-3">
                     <Avatar className="h-8 w-8">
