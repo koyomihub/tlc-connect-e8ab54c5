@@ -362,7 +362,7 @@ export default function Feed() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center gap-2">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -380,6 +380,19 @@ export default function Feed() {
                   <ImageIcon className="mr-2 h-4 w-4" />
                   Add Images
                 </Button>
+                <Select value={postPrivacy} onValueChange={(v) => setPostPrivacy(v as PostPrivacy)}>
+                  <SelectTrigger className="w-[160px] h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="public">
+                      <span className="flex items-center"><Globe className="mr-2 h-4 w-4" />Public</span>
+                    </SelectItem>
+                    <SelectItem value="friends">
+                      <span className="flex items-center"><UsersIcon className="mr-2 h-4 w-4" />Followers</span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button onClick={createPost} disabled={!newPost.trim() || uploading} className="ml-auto">
                   <Send className="mr-2 h-4 w-4" />
                   {uploading ? 'Posting...' : 'Post'}
