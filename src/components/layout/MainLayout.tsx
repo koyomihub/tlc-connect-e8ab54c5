@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
+import logo from '@/assets/tlc-connect-logo.png';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/NotificationBell';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -50,12 +51,10 @@ export function MainLayout({ children }: MainLayoutProps) {
       <header className="sticky top-0 z-50 w-full border-b bg-card/80 backdrop-blur-lg shadow-sm">
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
-            <span className="text-white font-bold text-xl">TC</span>
-          </div>
-          <span className="font-bold text-xl bg-gradient-primary bg-clip-text text-transparent">
-            TLC-Connect
-          </span>
+            <img src={logo} alt="TLC-Connect logo" className="w-10 h-10 rounded-lg shadow-glow object-contain" />
+            <span className="font-bold text-xl bg-gradient-primary bg-clip-text text-transparent">
+              TLC-Connect
+            </span>
           </div>
 
           <nav className="hidden md:flex items-center space-x-1">

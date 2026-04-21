@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Users, MessageSquare, Gift, Award, TrendingUp, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import logo from "@/assets/tlc-connect-logo.png";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function Index() {
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-20">
         <div className="text-center space-y-6 max-w-3xl mx-auto">
+          <img src={logo} alt="TLC-Connect logo" className="w-32 h-32 mx-auto rounded-3xl shadow-glow object-contain" />
           <h1 className="text-5xl md:text-6xl font-bold bg-gradient-primary bg-clip-text text-transparent">
             Welcome to TLC-Connect
           </h1>
