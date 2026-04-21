@@ -19,6 +19,7 @@ interface Post {
   image_urls: string[] | null;
   likes_count: number;
   comments_count: number;
+  reposts_count: number;
   created_at: string;
   user_id: string;
   profiles: {
@@ -61,6 +62,7 @@ export default function Feed() {
                   ...post,
                   likes_count: updatedPost.likes_count ?? post.likes_count,
                   comments_count: updatedPost.comments_count ?? post.comments_count,
+                  reposts_count: updatedPost.reposts_count ?? post.reposts_count,
                 }
               : post
           ));
@@ -440,7 +442,7 @@ export default function Feed() {
                   className={isReposted ? 'text-green-500' : ''}
                 >
                   <Repeat2 className={`mr-2 h-4 w-4 ${isReposted ? 'fill-current' : ''}`} />
-                  Repost
+                  {post.reposts_count || 0}
                 </Button>
               </div>
             </Card>
