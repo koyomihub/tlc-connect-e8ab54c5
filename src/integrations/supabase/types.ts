@@ -974,6 +974,7 @@ export type Database = {
         | "group_invite"
         | "mention"
         | "thread_reply"
+        | "repost"
       post_privacy: "public" | "private" | "friends"
     }
     CompositeTypes: {
@@ -1110,6 +1111,7 @@ export const Constants = {
         "group_invite",
         "mention",
         "thread_reply",
+        "repost",
       ],
       post_privacy: ["public", "private", "friends"],
     },
