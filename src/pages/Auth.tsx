@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import logo from '@/assets/tlc-connect-logo.png';
 
 export default function Auth() {
   const { signIn, signUp } = useAuth();
@@ -42,9 +43,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-subtle p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow">
-            <span className="text-white font-bold text-2xl">TLC</span>
-          </div>
+          <img src={logo} alt="TLC-Connect logo" className="w-20 h-20 mx-auto mb-4 rounded-2xl shadow-glow object-contain" />
           <CardTitle className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
             Welcome to TLC Connect
           </CardTitle>
