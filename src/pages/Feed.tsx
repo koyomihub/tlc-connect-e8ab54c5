@@ -209,6 +209,7 @@ export default function Feed() {
           content: newPost.trim(),
           image_url: imageUrls[0] || null,
           image_urls: imageUrls,
+          privacy: postPrivacy,
         })
         .select('id')
         .single();
