@@ -12,6 +12,8 @@ import { Heart, MessageCircle, Send, Image as ImageIcon, X, Repeat2, Newspaper, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
+import { PostPrivacyBadge } from '@/components/feed/PostPrivacyBadge';
+import { FeedVisibilityChecklist } from '@/components/feed/FeedVisibilityChecklist';
 
 type PostPrivacy = 'public' | 'friends';
 
@@ -97,7 +99,6 @@ export default function Feed() {
   const fetchPosts = async () => {
     if (!user) return;
 
-    // Get the list of users that the current user follows
     const { data: followsData } = await supabase
       .from('follows')
       .select('following_id')
@@ -106,7 +107,6 @@ export default function Feed() {
     const followedIds = (followsData || []).map((f) => f.following_id);
     setFollowingIds(followedIds);
 
-    // Always include the user's own posts in their Feed
     const visibleUserIds = Array.from(new Set([...followedIds, user.id]));
 
     const { data, error } = await supabase
@@ -400,6 +400,8 @@ export default function Feed() {
           </div>
         </Card>
 
+        <FeedVisibilityChecklist />
+
         {posts.map((post) => {
           const isLiked = likedPosts.has(post.id);
           const isReposted = repostedPosts.has(post.id);
@@ -416,16 +418,19 @@ export default function Feed() {
                     {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
-                <div>
+                <div className="space-y-1">
                   <p 
                     className="font-semibold cursor-pointer hover:text-primary transition-colors"
                     onClick={() => navigate(`/profile/${post.user_id}`)}
                   >
                     {post.profiles?.display_name}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                    <span>
+                      {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                    </span>
+                    <PostPrivacyBadge privacy={post.privacy} />
+                  </div>
                 </div>
               </div>
 
@@ -488,8 +493,8 @@ export default function Feed() {
           <Card className="p-12 text-center space-y-2">
             <p className="text-muted-foreground">
               {followingIds.length === 0
-                ? "Your feed is empty. Follow people to see their posts here!"
-                : "No posts from people you follow yet."}
+                ? 'No posts yet. Create a post or follow people to see more activity here.'
+                : 'No visible posts yet.'}
             </p>
             {followingIds.length === 0 && (
               <Button variant="outline" onClick={() => navigate('/people')}>
