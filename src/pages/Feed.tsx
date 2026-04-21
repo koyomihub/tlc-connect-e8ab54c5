@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
 import { PostPrivacyBadge } from '@/components/feed/PostPrivacyBadge';
-import { FeedVisibilityChecklist } from '@/components/feed/FeedVisibilityChecklist';
 
 type PostPrivacy = 'public' | 'friends';
 
@@ -397,8 +396,6 @@ export default function Feed() {
             </div>
           </div>
         </Card>
-
-        <FeedVisibilityChecklist />
 
         {posts.map((post) => {
           const isLiked = likedPosts.has(post.id);
