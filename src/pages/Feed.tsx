@@ -95,6 +95,22 @@ export default function Feed() {
   };
 
   const fetchPosts = async () => {
+    if (!user) return;
+
+    // Get the list of users that the current user follows
+    const { data: followsData } = await supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', user.id);
+
+    const followedIds = (followsData || []).map((f) => f.following_id);
+    setFollowingIds(followedIds);
+
+    if (followedIds.length === 0) {
+      setPosts([]);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('posts')
       .select(`
@@ -102,6 +118,7 @@ export default function Feed() {
         profiles!posts_user_id_fkey (display_name, avatar_url)
       `)
       .eq('is_hidden', false)
+      .in('user_id', followedIds)
       .order('created_at', { ascending: false });
 
     if (error) {
