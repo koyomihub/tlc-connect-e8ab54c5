@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, UserPlus, UserMinus } from 'lucide-react';
+import { Search, UserPlus, UserMinus, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -125,13 +125,16 @@ export default function People() {
   return (
     <MainLayout>
       <div className="max-w-4xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            People
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Discover and connect with others
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center bg-gradient-primary bg-clip-text text-transparent">
+              <Users className="h-8 w-8 mr-2 text-primary" />
+              People
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Discover and connect with others
+            </p>
+          </div>
         </div>
 
         <div className="relative">
