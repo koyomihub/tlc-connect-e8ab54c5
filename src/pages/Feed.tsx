@@ -8,9 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Heart, MessageCircle, Send, Image as ImageIcon, X, Repeat2, Newspaper } from 'lucide-react';
+import { Heart, MessageCircle, Send, Image as ImageIcon, X, Repeat2, Newspaper, Globe, Users as UsersIcon } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
+
+type PostPrivacy = 'public' | 'friends';
 
 interface Post {
   id: string;
@@ -20,6 +23,7 @@ interface Post {
   likes_count: number;
   comments_count: number;
   reposts_count: number;
+  privacy: PostPrivacy;
   created_at: string;
   user_id: string;
   profiles: {
@@ -40,6 +44,8 @@ export default function Feed() {
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [repostedPosts, setRepostedPosts] = useState<Set<string>>(new Set());
   const [userProfile, setUserProfile] = useState<{ avatar_url?: string; display_name?: string } | null>(null);
+  const [postPrivacy, setPostPrivacy] = useState<PostPrivacy>('public');
+  const [followingIds, setFollowingIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -89,6 +95,22 @@ export default function Feed() {
   };
 
   const fetchPosts = async () => {
+    if (!user) return;
+
+    // Get the list of users that the current user follows
+    const { data: followsData } = await supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', user.id);
+
+    const followedIds = (followsData || []).map((f) => f.following_id);
+    setFollowingIds(followedIds);
+
+    if (followedIds.length === 0) {
+      setPosts([]);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('posts')
       .select(`
@@ -96,6 +118,7 @@ export default function Feed() {
         profiles!posts_user_id_fkey (display_name, avatar_url)
       `)
       .eq('is_hidden', false)
+      .in('user_id', followedIds)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -186,6 +209,7 @@ export default function Feed() {
           content: newPost.trim(),
           image_url: imageUrls[0] || null,
           image_urls: imageUrls,
+          privacy: postPrivacy,
         })
         .select('id')
         .single();
@@ -338,7 +362,7 @@ export default function Feed() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center gap-2">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -356,6 +380,19 @@ export default function Feed() {
                   <ImageIcon className="mr-2 h-4 w-4" />
                   Add Images
                 </Button>
+                <Select value={postPrivacy} onValueChange={(v) => setPostPrivacy(v as PostPrivacy)}>
+                  <SelectTrigger className="w-[160px] h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="public">
+                      <span className="flex items-center"><Globe className="mr-2 h-4 w-4" />Public</span>
+                    </SelectItem>
+                    <SelectItem value="friends">
+                      <span className="flex items-center"><UsersIcon className="mr-2 h-4 w-4" />Followers</span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button onClick={createPost} disabled={!newPost.trim() || uploading} className="ml-auto">
                   <Send className="mr-2 h-4 w-4" />
                   {uploading ? 'Posting...' : 'Post'}
@@ -450,8 +487,17 @@ export default function Feed() {
         })}
 
         {posts.length === 0 && (
-          <Card className="p-12 text-center">
-            <p className="text-muted-foreground">No posts yet. Be the first to share!</p>
+          <Card className="p-12 text-center space-y-2">
+            <p className="text-muted-foreground">
+              {followingIds.length === 0
+                ? "Your feed is empty. Follow people to see their posts here!"
+                : "No posts from people you follow yet."}
+            </p>
+            {followingIds.length === 0 && (
+              <Button variant="outline" onClick={() => navigate('/people')}>
+                Discover People
+              </Button>
+            )}
           </Card>
         )}
       </div>

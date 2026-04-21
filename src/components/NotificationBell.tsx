@@ -97,7 +97,7 @@ export function NotificationBell() {
           <h3 className="font-semibold">Notifications</h3>
           {unreadCount > 0 && (
             <Button variant="ghost" size="sm" onClick={markAllAsRead}>
-              Mark all read
+              Mark All as Read
             </Button>
           )}
         </div>
