@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
 
+type PostPrivacy = 'public' | 'friends';
+
 interface Post {
   id: string;
   content: string;
@@ -21,6 +23,7 @@ interface Post {
   likes_count: number;
   comments_count: number;
   reposts_count: number;
+  privacy: PostPrivacy;
   created_at: string;
   user_id: string;
   profiles: {
