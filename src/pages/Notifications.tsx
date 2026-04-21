@@ -7,9 +7,11 @@ import { Bell } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 export default function Notifications() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<any[]>([]);
 
   useEffect(() => {
@@ -61,6 +63,18 @@ export default function Notifications() {
     fetchNotifications();
   };
 
+  const handleNotificationClick = async (notification: any) => {
+    if (!notification.is_read) {
+      await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notification.id);
+    }
+    if (notification.post_id) {
+      navigate(`/posts/${notification.post_id}`);
+    }
+  };
+
   const markAllAsRead = async () => {
     await supabase
       .from('notifications')
@@ -98,9 +112,10 @@ export default function Notifications() {
             notifications.map((notification) => (
               <Card
                 key={notification.id}
-                className={`transition-all hover:shadow-md ${
+                className={`transition-all hover:shadow-md ${notification.post_id ? 'cursor-pointer' : ''} ${
                   !notification.is_read ? 'border-primary bg-accent/50' : ''
                 }`}
+                onClick={() => handleNotificationClick(notification)}
               >
                 <CardHeader>
                   <div className="flex items-start space-x-3">
@@ -121,7 +136,10 @@ export default function Notifications() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => markAsRead(notification.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markAsRead(notification.id);
+                          }}
                         >
                           Mark as Read
                         </Button>
