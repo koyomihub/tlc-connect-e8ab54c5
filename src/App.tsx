@@ -9,8 +9,6 @@ import { WalletProvider } from "@/contexts/WalletContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Feed from "./pages/Feed";
-import Threads from "./pages/Threads";
-import ThreadDetail from "./pages/ThreadDetail";
 import PostDetail from "./pages/PostDetail";
 import Earn from "./pages/Earn";
 import Rewards from "./pages/Rewards";

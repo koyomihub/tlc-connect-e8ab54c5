@@ -36,7 +36,6 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   const menuItems = [
     { path: '/feed', label: 'Feed', icon: Home },
-    { path: '/threads', label: 'Threads', icon: MessageSquare },
     { path: '/groups', label: 'Groups', icon: Users },
     { path: '/people', label: 'People', icon: UserPlus },
     { path: '/earn', label: 'Earn', icon: Coins },

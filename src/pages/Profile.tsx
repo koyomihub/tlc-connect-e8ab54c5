@@ -311,14 +311,10 @@ export default function Profile() {
         </Card>
 
         {/* User Stats */}
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 gap-4">
           <Card>
             <CardHeader><h3 className="font-semibold">Posts</h3></CardHeader>
             <CardContent><p className="text-3xl font-bold">{userPosts.length}</p></CardContent>
-          </Card>
-          <Card>
-            <CardHeader><h3 className="font-semibold">Threads</h3></CardHeader>
-            <CardContent><p className="text-3xl font-bold">{userThreads.length}</p></CardContent>
           </Card>
           <Card>
             <CardHeader><h3 className="font-semibold">Groups</h3></CardHeader>

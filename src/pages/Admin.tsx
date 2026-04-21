@@ -281,13 +281,12 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="users">
               <Users className="h-4 w-4 mr-2" />
               Users
             </TabsTrigger>
             <TabsTrigger value="posts">Posts</TabsTrigger>
-            <TabsTrigger value="threads">Threads</TabsTrigger>
             <TabsTrigger value="groups">Groups</TabsTrigger>
             <TabsTrigger value="organizations">
               <Building className="h-4 w-4 mr-2" />
@@ -391,46 +390,6 @@ export default function Admin() {
                             variant="ghost"
                             size="sm"
                             onClick={() => deletePost(post.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="threads" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>All Threads ({threads.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Author</TableHead>
-                      <TableHead>Views</TableHead>
-                      <TableHead>Replies</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {threads.map((thread) => (
-                      <TableRow key={thread.id}>
-                        <TableCell className="max-w-md truncate">{thread.title}</TableCell>
-                        <TableCell>{thread.profiles?.display_name}</TableCell>
-                        <TableCell>{thread.views_count}</TableCell>
-                        <TableCell>{thread.replies_count}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteThread(thread.id)}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
