@@ -62,22 +62,6 @@ const App = () => (
                 }
               />
               <Route
-                path="/threads"
-                element={
-                  <ProtectedRoute>
-                    <Threads />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/threads/:id"
-                element={
-                  <ProtectedRoute>
-                    <ThreadDetail />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/posts/:id"
                 element={
                   <ProtectedRoute>
