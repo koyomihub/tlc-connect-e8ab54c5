@@ -106,10 +106,8 @@ export default function Feed() {
     const followedIds = (followsData || []).map((f) => f.following_id);
     setFollowingIds(followedIds);
 
-    if (followedIds.length === 0) {
-      setPosts([]);
-      return;
-    }
+    // Always include the user's own posts in their Feed
+    const visibleUserIds = Array.from(new Set([...followedIds, user.id]));
 
     const { data, error } = await supabase
       .from('posts')
@@ -118,7 +116,7 @@ export default function Feed() {
         profiles!posts_user_id_fkey (display_name, avatar_url)
       `)
       .eq('is_hidden', false)
-      .in('user_id', followedIds)
+      .in('user_id', visibleUserIds)
       .order('created_at', { ascending: false });
 
     if (error) {
