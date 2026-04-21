@@ -521,6 +521,7 @@ export type Database = {
           is_hidden: boolean | null
           likes_count: number | null
           privacy: Database["public"]["Enums"]["post_privacy"] | null
+          reposts_count: number | null
           updated_at: string | null
           user_id: string
         }
@@ -534,6 +535,7 @@ export type Database = {
           is_hidden?: boolean | null
           likes_count?: number | null
           privacy?: Database["public"]["Enums"]["post_privacy"] | null
+          reposts_count?: number | null
           updated_at?: string | null
           user_id: string
         }
@@ -547,6 +549,7 @@ export type Database = {
           is_hidden?: boolean | null
           likes_count?: number | null
           privacy?: Database["public"]["Enums"]["post_privacy"] | null
+          reposts_count?: number | null
           updated_at?: string | null
           user_id?: string
         }
@@ -974,6 +977,7 @@ export type Database = {
         | "group_invite"
         | "mention"
         | "thread_reply"
+        | "repost"
       post_privacy: "public" | "private" | "friends"
     }
     CompositeTypes: {
@@ -1110,6 +1114,7 @@ export const Constants = {
         "group_invite",
         "mention",
         "thread_reply",
+        "repost",
       ],
       post_privacy: ["public", "private", "friends"],
     },
