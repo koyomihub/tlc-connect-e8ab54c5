@@ -65,6 +65,52 @@ export default function Feed() {
   const [postPrivacy, setPostPrivacy] = useState<PostPrivacy>('public');
   const [followingIds, setFollowingIds] = useState<string[]>([]);
 
+  // Edit/delete state
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editPrivacy, setEditPrivacy] = useState<PostPrivacy>('public');
+  const [editSaving, setEditSaving] = useState(false);
+
+  const openEdit = (post: Post) => {
+    setEditingPost(post);
+    setEditContent(post.content);
+    setEditPrivacy(post.privacy);
+  };
+
+  const saveEdit = async () => {
+    if (!editingPost) return;
+    if (!editContent.trim()) {
+      toast({ title: 'Content required', variant: 'destructive' });
+      return;
+    }
+    setEditSaving(true);
+    const { error } = await supabase
+      .from('posts')
+      .update({ content: editContent, privacy: editPrivacy })
+      .eq('id', editingPost.id);
+    setEditSaving(false);
+    if (error) {
+      toast({ title: 'Error updating post', description: error.message, variant: 'destructive' });
+    } else {
+      setPosts((prev) =>
+        prev.map((p) => (p.id === editingPost.id ? { ...p, content: editContent, privacy: editPrivacy } : p))
+      );
+      setEditingPost(null);
+      toast({ title: 'Post updated' });
+    }
+  };
+
+  const deletePost = async (postId: string) => {
+    if (!confirm('Delete this post? This cannot be undone.')) return;
+    const { error } = await supabase.from('posts').delete().eq('id', postId);
+    if (error) {
+      toast({ title: 'Error deleting post', description: error.message, variant: 'destructive' });
+    } else {
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      toast({ title: 'Post deleted' });
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
 
