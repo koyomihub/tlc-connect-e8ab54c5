@@ -178,9 +178,9 @@ export default function Earn() {
         <div>
           <h1 className="text-3xl font-bold flex items-center bg-gradient-primary bg-clip-text text-transparent">
             <Coins className="h-8 w-8 mr-2 text-primary" />
-            Earn Tokens
+            Earn TLC Points
           </h1>
-          <p className="text-muted-foreground mt-1">Participate in the community and earn TLC tokens</p>
+          <p className="text-muted-foreground mt-1">Participate in the community and earn TLC points</p>
         </div>
 
         {/* Balance Card */}
@@ -188,37 +188,31 @@ export default function Earn() {
           <CardHeader>
             <CardTitle className="flex items-center text-white">
               <Coins className="h-6 w-6 mr-2" />
-              Your Token Balance
+              Account Balance
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center">
               <div className="text-6xl font-bold text-white animate-pulse-glow">{stats.balance.toLocaleString()}</div>
-              <div className="text-white/80 mt-2">TLC Tokens</div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 mt-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-white">+{stats.earnedToday}</div>
-                <div className="text-sm text-white/70">Today</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-white">{stats.totalEarned.toLocaleString()}</div>
-                <div className="text-sm text-white/70">Total Earned</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-white">#{stats.rank || '—'}</div>
-                <div className="text-sm text-white/70">Rank</div>
-              </div>
+              <div className="text-white/80 mt-2">Claimable Points</div>
             </div>
 
             {/* Wallet Section */}
             <div className="pt-4 border-t border-white/20 space-y-2">
               {!account ? (
-                <Button onClick={connectWallet} disabled={connecting} variant="secondary" className="w-full">
-                  <Wallet className="h-4 w-4 mr-2" />
-                  {connecting ? 'Connecting...' : 'Connect Wallet'}
-                </Button>
+                <>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-white/10 border border-white/20">
+                    <Coins className="h-5 w-5 text-yellow-300 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-white/60">On-Chain $TLC Balance</p>
+                      <p className="text-lg font-bold text-white font-mono truncate">0</p>
+                    </div>
+                  </div>
+                  <Button onClick={connectWallet} disabled={connecting} variant="secondary" className="w-full">
+                    <Wallet className="h-4 w-4 mr-2" />
+                    {connecting ? 'Connecting...' : 'Connect Wallet'}
+                  </Button>
+                </>
               ) : (
                 <>
                   <div className="flex items-center justify-between">
