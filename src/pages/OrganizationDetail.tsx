@@ -225,12 +225,48 @@ export default function OrganizationDetail() {
                           onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label>Image (optional)</Label>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleImageSelect}
+                        />
+                        {imagePreview ? (
+                          <div className="relative">
+                            <img src={imagePreview} alt="Preview" className="rounded-lg max-h-[300px] w-full object-cover" />
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="icon"
+                              className="absolute top-2 right-2 h-7 w-7"
+                              onClick={clearImage}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
+                          >
+                            <ImageIcon className="h-4 w-4 mr-2" />
+                            Add image
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={uploading}>
                         Cancel
                       </Button>
-                      <Button onClick={createPost}>Create Post</Button>
+                      <Button onClick={createPost} disabled={uploading}>
+                        {uploading ? 'Posting...' : 'Create Post'}
+                      </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
