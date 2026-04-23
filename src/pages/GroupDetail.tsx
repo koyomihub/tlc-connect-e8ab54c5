@@ -556,6 +556,12 @@ export default function GroupDetail() {
             Back to Groups
           </Button>
           <div className="flex space-x-2 flex-wrap gap-2">
+            {isMember && (
+              <Button variant="outline" size="sm" onClick={() => setMembersDialogOpen(true)}>
+                <Users className="h-4 w-4 mr-2" />
+                Members ({members.length})
+              </Button>
+            )}
             {canInvite && (
               <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
                 <DialogTrigger asChild>
