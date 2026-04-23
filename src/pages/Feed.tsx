@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
 import { PostPrivacyBadge } from '@/components/feed/PostPrivacyBadge';
+import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
 
 type PostPrivacy = 'public' | 'friends';
 
@@ -431,43 +432,21 @@ export default function Feed() {
 
               <p className="mb-4 whitespace-pre-wrap">{post.content}</p>
 
-              {post.image_urls && post.image_urls.length > 0 ? (
-                post.image_urls.length === 1 ? (
-                  <div className="mb-4 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
-                    <img
-                      src={post.image_urls[0]}
+              {(() => {
+                const imgs = post.image_urls && post.image_urls.length > 0
+                  ? post.image_urls
+                  : post.image_url ? [post.image_url] : [];
+                if (imgs.length === 0) return null;
+                return (
+                  <div className="mb-4">
+                    <PostImageCarousel
+                      images={imgs}
                       alt="Post image"
-                      className="max-h-[500px] w-auto max-w-full object-contain cursor-pointer"
-                      onClick={() => navigate(`/posts/${post.id}`)}
+                      onImageClick={() => navigate(`/posts/${post.id}`)}
                     />
                   </div>
-                ) : (
-                  <div className="mb-4 flex gap-2 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1 scroll-smooth">
-                    {post.image_urls.map((url: string, index: number) => (
-                      <div
-                        key={index}
-                        className="snap-start shrink-0 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden max-w-full"
-                      >
-                        <img
-                          src={url}
-                          alt={`Post image ${index + 1}`}
-                          className="max-h-[500px] w-auto max-w-[85vw] sm:max-w-[500px] object-contain cursor-pointer"
-                          onClick={() => navigate(`/posts/${post.id}`)}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )
-              ) : post.image_url ? (
-                <div className="mb-4 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
-                  <img
-                    src={post.image_url}
-                    alt="Post"
-                    className="max-h-[500px] w-auto max-w-full object-contain cursor-pointer"
-                    onClick={() => navigate(`/posts/${post.id}`)}
-                  />
-                </div>
-              ) : null}
+                );
+              })()}
 
               <div className="flex items-center space-x-4 pt-4 border-t">
                 <Button
