@@ -240,13 +240,13 @@ export default function Earn() {
               Daily Goal Progress
             </CardTitle>
             <CardDescription>
-              {remaining > 0 ? `Earn ${remaining} more tokens to hit today's limit` : "You've reached today's 100-token limit!"}
+              {remaining > 0 ? `Earn ${remaining} more TLC points to hit today's limit` : "You've reached today's 100 TLC points limit!"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>{stats.earnedToday} / {DAILY_LIMIT} tokens</span>
+                <span>{stats.earnedToday} / {DAILY_LIMIT} TLC points</span>
                 <span>{dailyProgress.toFixed(0)}%</span>
               </div>
               <Progress value={dailyProgress} className="h-3" />
@@ -256,7 +256,7 @@ export default function Earn() {
 
         {/* Earning Methods */}
         <div>
-          <h2 className="text-2xl font-bold mb-4">Ways to Earn Tokens</h2>
+          <h2 className="text-2xl font-bold mb-4">Ways to Earn TLC Points</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {activities.map((activity) => {
               const Icon = activity.icon;
@@ -308,12 +308,12 @@ export default function Earn() {
             <CardTitle className="text-primary">Important</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>• Maximum {DAILY_LIMIT} tokens can be earned per day across all methods</p>
-            <p>• You cannot earn tokens by liking your own posts</p>
+            <p>• Maximum {DAILY_LIMIT} TLC points can be earned per day across all methods</p>
+            <p>• You cannot earn TLC points by liking your own posts</p>
             <p>• Each like from another user counts only once (no duplicates)</p>
-            <p>• Unliking a post does not reduce your earned tokens</p>
-            <p>• Connect your wallet to claim tokens on the blockchain</p>
-            <p>• Tokens can be used in the Rewards store to purchase NFTs</p>
+            <p>• Unliking a post does not reduce your earned TLC points</p>
+            <p>• Connect your wallet to claim your TLC points as $TLC tokens on the blockchain</p>
+            <p>• $TLC tokens can be used in the Rewards store to purchase NFTs</p>
           </CardContent>
         </Card>
       </div>
