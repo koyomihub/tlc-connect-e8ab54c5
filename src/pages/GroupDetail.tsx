@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import {
-  ArrowLeft, Send, Users, Edit, Trash2, Crown, Camera, UserPlus, Lock, Globe, Check, X, Inbox,
+  ArrowLeft, Send, Users, Edit, Trash2, Crown, Camera, UserPlus, Lock, Globe, Check, X, Inbox, UserMinus, Shield,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { awardTokens } from '@/lib/awardTokens';
@@ -54,6 +54,7 @@ export default function GroupDetail() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [followers, setFollowers] = useState<any[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
+  const [membersDialogOpen, setMembersDialogOpen] = useState(false);
   const [repositioning, setRepositioning] = useState(false);
   const [coverPosition, setCoverPosition] = useState<string>('center');
   const [draftPosition, setDraftPosition] = useState<string>('center');
@@ -355,6 +356,23 @@ export default function GroupDetail() {
     else { toast({ title: 'Left group' }); navigate('/groups'); }
   };
 
+  const removeMember = async (memberId: string, memberName?: string) => {
+    if (memberId === group?.creator_id) {
+      toast({ title: 'Cannot remove the owner', variant: 'destructive' });
+      return;
+    }
+    const { error } = await supabase
+      .from('group_members').delete()
+      .eq('group_id', id).eq('user_id', memberId);
+    if (error) {
+      toast({ title: 'Error removing member', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: `Removed ${memberName || 'member'} from the group` });
+      fetchMembers();
+      fetchGroup();
+    }
+  };
+
   const deleteGroup = async () => {
     const { error } = await supabase.from('groups').delete().eq('id', id);
     if (error) toast({ title: 'Error deleting group', description: error.message, variant: 'destructive' });
@@ -538,6 +556,12 @@ export default function GroupDetail() {
             Back to Groups
           </Button>
           <div className="flex space-x-2 flex-wrap gap-2">
+            {isMember && (
+              <Button variant="outline" size="sm" onClick={() => setMembersDialogOpen(true)}>
+                <Users className="h-4 w-4 mr-2" />
+                Members ({members.length})
+              </Button>
+            )}
             {canInvite && (
               <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
                 <DialogTrigger asChild>
@@ -821,9 +845,13 @@ export default function GroupDetail() {
                     {group.name}
                     {isPrivate ? <Lock className="h-4 w-4 text-muted-foreground" /> : <Globe className="h-4 w-4 text-muted-foreground" />}
                   </h1>
-                  <p className="text-sm text-muted-foreground">
-                    {group.members_count} members • {isPrivate ? 'Private' : 'Public'}
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setMembersDialogOpen(true)}
+                    className="text-sm text-muted-foreground hover:text-foreground transition text-left"
+                  >
+                    <span className="underline-offset-2 hover:underline">{group.members_count} members</span> • {isPrivate ? 'Private' : 'Public'}
+                  </button>
                   {creatorProfile && (
                     <p className="text-xs text-muted-foreground mt-1">
                       Created by {creatorProfile.display_name}
@@ -871,6 +899,86 @@ export default function GroupDetail() {
             )}
           </CardHeader>
         </Card>
+
+        {/* Members dialog */}
+        <Dialog open={membersDialogOpen} onOpenChange={setMembersDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Group Members</DialogTitle>
+              <DialogDescription>
+                {members.length} {members.length === 1 ? 'member' : 'members'} in this group.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="max-h-96 overflow-y-auto space-y-2">
+              {members
+                .slice()
+                .sort((a, b) => {
+                  const aRank = a.user_id === group?.creator_id ? 0 : a.is_admin ? 1 : 2;
+                  const bRank = b.user_id === group?.creator_id ? 0 : b.is_admin ? 1 : 2;
+                  return aRank - bRank;
+                })
+                .map((m) => {
+                  const isOwner = m.user_id === group?.creator_id;
+                  const isSelf = m.user_id === user?.id;
+                  return (
+                    <div key={m.user_id} className="flex items-center justify-between p-2 rounded hover:bg-accent/50">
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarImage src={m.profiles?.avatar_url} />
+                          <AvatarFallback>{m.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-medium flex items-center gap-1.5">
+                            {m.profiles?.display_name || 'Unknown'}
+                            {isSelf && <span className="text-xs text-muted-foreground">(you)</span>}
+                          </p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {isOwner ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                                <Crown className="h-3 w-3" /> Owner
+                              </span>
+                            ) : m.is_admin ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                <Shield className="h-3 w-3" /> Admin
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">Member</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {isCreator && !isOwner && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive">
+                              <UserMinus className="h-4 w-4 mr-1" /> Remove
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remove {m.profiles?.display_name || 'this member'}?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                They will lose access to the group chat and will need to be invited or request to join again.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => removeMember(m.user_id, m.profiles?.display_name)}
+                                className="bg-destructive text-destructive-foreground"
+                              >
+                                Remove
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Pending invitation for the current user */}
         {pendingInvitations.length > 0 && !isMember && (
