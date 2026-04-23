@@ -90,7 +90,24 @@ export default function GroupDetail() {
       setGroupEditData({ name: data.name, description: data.description || '' });
       setIsCreator(data.creator_id === user?.id);
       setCreatorProfile(data.profiles);
+      const pos = (data as any).cover_position || 'center';
+      setCoverPosition(pos);
+      setDraftPosition(pos);
     }
+  };
+
+  const fetchFollowers = async () => {
+    if (!user) return;
+    // People the current user follows
+    const { data } = await supabase
+      .from('follows')
+      .select('following_id, profiles:following_id (id, display_name, avatar_url)')
+      .eq('follower_id', user.id);
+    const memberIds = new Set(members.map((m) => m.user_id));
+    const list = (data || [])
+      .map((row: any) => row.profiles)
+      .filter((p: any) => p && !memberIds.has(p.id));
+    setFollowers(list);
   };
 
   const fetchMembers = async () => {
