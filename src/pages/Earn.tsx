@@ -143,7 +143,7 @@ export default function Earn() {
 
     const success = await awardTokens(5, 'daily_login', 'Daily login bonus');
     if (success) {
-      toast({ title: '+5 Tokens!', description: 'Daily login bonus claimed' });
+      toast({ title: '+5 TLC Points!', description: 'Daily login bonus claimed' });
       setDailyLoginClaimed(true);
     }
     setClaimingLogin(false);
@@ -178,9 +178,9 @@ export default function Earn() {
         <div>
           <h1 className="text-3xl font-bold flex items-center bg-gradient-primary bg-clip-text text-transparent">
             <Coins className="h-8 w-8 mr-2 text-primary" />
-            Earn Tokens
+            Earn TLC Points
           </h1>
-          <p className="text-muted-foreground mt-1">Participate in the community and earn TLC tokens</p>
+          <p className="text-muted-foreground mt-1">Participate in the community and earn TLC points</p>
         </div>
 
         {/* Balance Card */}
@@ -188,37 +188,31 @@ export default function Earn() {
           <CardHeader>
             <CardTitle className="flex items-center text-white">
               <Coins className="h-6 w-6 mr-2" />
-              Your Token Balance
+              Account Balance
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center">
               <div className="text-6xl font-bold text-white animate-pulse-glow">{stats.balance.toLocaleString()}</div>
-              <div className="text-white/80 mt-2">TLC Tokens</div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 mt-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-white">+{stats.earnedToday}</div>
-                <div className="text-sm text-white/70">Today</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-white">{stats.totalEarned.toLocaleString()}</div>
-                <div className="text-sm text-white/70">Total Earned</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-white">#{stats.rank || '—'}</div>
-                <div className="text-sm text-white/70">Rank</div>
-              </div>
+              <div className="text-white/80 mt-2">Claimable Points</div>
             </div>
 
             {/* Wallet Section */}
             <div className="pt-4 border-t border-white/20 space-y-2">
               {!account ? (
-                <Button onClick={connectWallet} disabled={connecting} variant="secondary" className="w-full">
-                  <Wallet className="h-4 w-4 mr-2" />
-                  {connecting ? 'Connecting...' : 'Connect Wallet'}
-                </Button>
+                <>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-white/10 border border-white/20">
+                    <Coins className="h-5 w-5 text-yellow-300 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-white/60">On-Chain $TLC Balance</p>
+                      <p className="text-lg font-bold text-white font-mono truncate">0</p>
+                    </div>
+                  </div>
+                  <Button onClick={connectWallet} disabled={connecting} variant="secondary" className="w-full">
+                    <Wallet className="h-4 w-4 mr-2" />
+                    {connecting ? 'Connecting...' : 'Connect Wallet'}
+                  </Button>
+                </>
               ) : (
                 <>
                   <div className="flex items-center justify-between">
@@ -246,13 +240,13 @@ export default function Earn() {
               Daily Goal Progress
             </CardTitle>
             <CardDescription>
-              {remaining > 0 ? `Earn ${remaining} more tokens to hit today's limit` : "You've reached today's 100-token limit!"}
+              {remaining > 0 ? `Earn ${remaining} more TLC points to hit today's limit` : "You've reached today's 100 TLC points limit!"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>{stats.earnedToday} / {DAILY_LIMIT} tokens</span>
+                <span>{stats.earnedToday} / {DAILY_LIMIT} TLC points</span>
                 <span>{dailyProgress.toFixed(0)}%</span>
               </div>
               <Progress value={dailyProgress} className="h-3" />
@@ -262,7 +256,7 @@ export default function Earn() {
 
         {/* Earning Methods */}
         <div>
-          <h2 className="text-2xl font-bold mb-4">Ways to Earn Tokens</h2>
+          <h2 className="text-2xl font-bold mb-4">Ways to Earn TLC Points</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {activities.map((activity) => {
               const Icon = activity.icon;
@@ -314,12 +308,12 @@ export default function Earn() {
             <CardTitle className="text-primary">Important</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>• Maximum {DAILY_LIMIT} tokens can be earned per day across all methods</p>
-            <p>• You cannot earn tokens by liking your own posts</p>
+            <p>• Maximum {DAILY_LIMIT} TLC points can be earned per day across all methods</p>
+            <p>• You cannot earn TLC points by liking your own posts</p>
             <p>• Each like from another user counts only once (no duplicates)</p>
-            <p>• Unliking a post does not reduce your earned tokens</p>
-            <p>• Connect your wallet to claim tokens on the blockchain</p>
-            <p>• Tokens can be used in the Rewards store to purchase NFTs</p>
+            <p>• Unliking a post does not reduce your earned TLC points</p>
+            <p>• Connect your wallet to claim your TLC points as $TLC tokens on the blockchain</p>
+            <p>• $TLC tokens can be used in the Rewards store to purchase NFTs</p>
           </CardContent>
         </Card>
       </div>
