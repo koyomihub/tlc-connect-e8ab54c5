@@ -88,6 +88,29 @@ export default function GroupDetail() {
     }
   }, [inviteDialogOpen, id]);
 
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel(`group-detail-${id}-changes`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'groups', filter: `id=eq.${id}` }, () => {
+        fetchGroup();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'group_join_requests', filter: `group_id=eq.${id}` }, () => {
+        if (isAdmin) fetchJoinRequests();
+        if (user && !isMember) checkPendingRequest();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'group_invitations', filter: `group_id=eq.${id}` }, () => {
+        if (inviteDialogOpen) fetchExistingInvites();
+        if (user) fetchPendingInvitations();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, inviteDialogOpen, isAdmin, isMember, user]);
+
   const fetchGroup = async () => {
     const { data } = await supabase
       .from('groups')
