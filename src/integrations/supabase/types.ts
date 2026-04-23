@@ -212,6 +212,7 @@ export type Database = {
       }
       groups: {
         Row: {
+          avatar_url: string | null
           cover_position: string | null
           created_at: string | null
           creator_id: string
@@ -224,6 +225,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          avatar_url?: string | null
           cover_position?: string | null
           created_at?: string | null
           creator_id: string
@@ -236,6 +238,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          avatar_url?: string | null
           cover_position?: string | null
           created_at?: string | null
           creator_id?: string

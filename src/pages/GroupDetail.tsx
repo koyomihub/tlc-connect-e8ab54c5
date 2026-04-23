@@ -46,9 +46,11 @@ export default function GroupDetail() {
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
   const [inviteSearch, setInviteSearch] = useState('');
   const [inviteResults, setInviteResults] = useState<any[]>([]);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState<false | 'cover' | 'avatar'>(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [followers, setFollowers] = useState<any[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
   const [repositioning, setRepositioning] = useState(false);
   const [coverPosition, setCoverPosition] = useState<string>('center');
   const [draftPosition, setDraftPosition] = useState<string>('center');
@@ -74,8 +76,9 @@ export default function GroupDetail() {
   }, [isAdmin, id]);
 
   useEffect(() => {
-    if (!user || !id || isMember) return;
-    checkPendingRequest();
+    if (!user || !id) return;
+    if (!isMember) checkPendingRequest();
+    fetchPendingInvitations();
   }, [user, id, isMember]);
 
   const fetchGroup = async () => {
@@ -140,6 +143,39 @@ export default function GroupDetail() {
       .eq('status', 'pending')
       .maybeSingle();
     setHasPendingRequest(!!data);
+  };
+
+  const fetchPendingInvitations = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('group_invitations')
+      .select(`*, inviter:profiles!group_invitations_inviter_id_fkey(id, display_name, avatar_url)`)
+      .eq('group_id', id)
+      .eq('invitee_id', user.id)
+      .eq('status', 'pending');
+    setPendingInvitations(data || []);
+  };
+
+  const respondToInvitation = async (invitationId: string, accept: boolean) => {
+    if (accept) {
+      // Add as member first, then mark accepted
+      const { error: memberErr } = await supabase
+        .from('group_members')
+        .insert({ group_id: id, user_id: user?.id });
+      if (memberErr && !memberErr.message.includes('duplicate')) {
+        toast({ title: 'Could not join', description: memberErr.message, variant: 'destructive' });
+        return;
+      }
+      await supabase.from('group_invitations').update({ status: 'accepted' }).eq('id', invitationId);
+      toast({ title: 'Invitation accepted — welcome!' });
+      setIsMember(true);
+      fetchGroup();
+      fetchMembers();
+    } else {
+      await supabase.from('group_invitations').update({ status: 'rejected' }).eq('id', invitationId);
+      toast({ title: 'Invitation declined' });
+    }
+    fetchPendingInvitations();
   };
 
   const fetchJoinRequests = async () => {
@@ -284,28 +320,32 @@ export default function GroupDetail() {
     else { toast({ title: 'Group updated!' }); setEditDialogOpen(false); fetchGroup(); }
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = (kind: 'cover' | 'avatar') => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    setUploadingPhoto(true);
+    setUploadingPhoto(kind);
     try {
       const ext = file.name.split('.').pop();
-      const path = `group-photos/${id}-${Date.now()}.${ext}`;
+      const path = `group-photos/${id}-${kind}-${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from('posts')
         .upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from('posts').getPublicUrl(path);
+      const update = kind === 'cover'
+        ? { image_url: urlData.publicUrl }
+        : { avatar_url: urlData.publicUrl };
       const { error: updateError } = await supabase
-        .from('groups').update({ image_url: urlData.publicUrl }).eq('id', id);
+        .from('groups').update(update as any).eq('id', id);
       if (updateError) throw updateError;
-      toast({ title: 'Group photo updated!' });
+      toast({ title: kind === 'cover' ? 'Cover photo updated!' : 'Group photo updated!' });
       fetchGroup();
     } catch (err: any) {
       toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
     } finally {
       setUploadingPhoto(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      const ref = kind === 'cover' ? coverInputRef : avatarInputRef;
+      if (ref.current) ref.current.value = '';
     }
   };
 
@@ -523,41 +563,44 @@ export default function GroupDetail() {
         </div>
 
         <Card className="overflow-hidden">
-          <div
-            ref={coverRef}
-            onPointerDown={handleCoverPointerDown}
-            onPointerMove={handleCoverPointerMove}
-            onPointerUp={handleCoverPointerUp}
-            onPointerCancel={handleCoverPointerUp}
-            className={`relative h-48 w-full overflow-hidden ${
-              group.image_url ? 'bg-muted' : 'bg-gradient-primary'
-            } ${repositioning ? 'cursor-grab active:cursor-grabbing select-none' : ''}`}
-          >
-            {group.image_url ? (
-              <img
-                src={group.image_url}
-                alt={group.name}
-                draggable={false}
-                className="w-full h-full object-cover pointer-events-none"
-                style={{ objectPosition: repositioning ? draftPosition : coverPosition }}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Users className="h-16 w-16 text-white/80" />
-              </div>
-            )}
+          <div className={`relative h-48 w-full overflow-hidden ${
+            group.image_url ? 'bg-muted' : 'bg-gradient-primary'
+          }`}>
+            {/* Drag layer (image only) — buttons are siblings so they don't trigger drag */}
+            <div
+              ref={coverRef}
+              onPointerDown={handleCoverPointerDown}
+              onPointerMove={handleCoverPointerMove}
+              onPointerUp={handleCoverPointerUp}
+              onPointerCancel={handleCoverPointerUp}
+              className={`absolute inset-0 ${repositioning ? 'cursor-grab active:cursor-grabbing select-none' : ''}`}
+            >
+              {group.image_url ? (
+                <img
+                  src={group.image_url}
+                  alt={group.name}
+                  draggable={false}
+                  className="w-full h-full object-cover pointer-events-none"
+                  style={{ objectPosition: repositioning ? draftPosition : coverPosition }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Users className="h-16 w-16 text-white/80" />
+                </div>
+              )}
+            </div>
 
             {isAdmin && !repositioning && (
-              <div className="absolute bottom-3 right-3 flex gap-2">
+              <div className="absolute bottom-3 right-3 flex gap-2 z-10">
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingPhoto}
+                  onClick={() => coverInputRef.current?.click()}
+                  disabled={!!uploadingPhoto}
                   className="bg-background/90 backdrop-blur border border-border rounded-full px-3 py-1.5 text-xs font-medium shadow hover:bg-accent transition flex items-center gap-1.5"
                   aria-label="Change cover photo"
                 >
                   <Camera className="h-3.5 w-3.5" />
-                  {uploadingPhoto ? 'Uploading…' : 'Change Cover'}
+                  {uploadingPhoto === 'cover' ? 'Uploading…' : 'Change Cover'}
                 </button>
                 {group.image_url && (
                   <button
@@ -569,10 +612,10 @@ export default function GroupDetail() {
                   </button>
                 )}
                 <input
-                  ref={fileInputRef}
+                  ref={coverInputRef}
                   type="file"
                   accept="image/*"
-                  onChange={handlePhotoUpload}
+                  onChange={handlePhotoUpload('cover')}
                   className="hidden"
                 />
               </div>
@@ -580,10 +623,10 @@ export default function GroupDetail() {
 
             {isAdmin && repositioning && (
               <>
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur rounded-full px-3 py-1 text-xs shadow">
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur rounded-full px-3 py-1 text-xs shadow z-10 pointer-events-none">
                   Drag the image to reposition
                 </div>
-                <div className="absolute bottom-3 right-3 flex gap-2">
+                <div className="absolute bottom-3 right-3 flex gap-2 z-10">
                   <Button size="sm" variant="outline" onClick={cancelReposition}>Cancel</Button>
                   <Button size="sm" onClick={saveCoverPosition}>Save Position</Button>
                 </div>
@@ -593,8 +636,34 @@ export default function GroupDetail() {
           <CardHeader>
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start space-x-3">
-                <div className="w-16 h-16 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
-                  <Users className="h-8 w-8 text-white" />
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {group.avatar_url ? (
+                      <img src={group.avatar_url} alt={group.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Users className="h-8 w-8 text-white" />
+                    )}
+                  </div>
+                  {isAdmin && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => avatarInputRef.current?.click()}
+                        disabled={!!uploadingPhoto}
+                        className="absolute -bottom-1 -right-1 bg-background border border-border rounded-full p-1.5 shadow hover:bg-accent transition"
+                        aria-label="Change group photo"
+                      >
+                        <Camera className="h-3.5 w-3.5" />
+                      </button>
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload('avatar')}
+                        className="hidden"
+                      />
+                    </>
+                  )}
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -651,6 +720,38 @@ export default function GroupDetail() {
             )}
           </CardHeader>
         </Card>
+
+        {/* Pending invitation for the current user */}
+        {pendingInvitations.length > 0 && !isMember && (
+          <Card className="border-primary">
+            <CardHeader>
+              <h3 className="font-semibold">You have an invitation</h3>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {pendingInvitations.map((inv) => (
+                <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/40">
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={inv.inviter?.avatar_url} />
+                      <AvatarFallback>{inv.inviter?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                    </Avatar>
+                    <p className="text-sm">
+                      <span className="font-medium">{inv.inviter?.display_name || 'Someone'}</span> invited you to join this group
+                    </p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button size="sm" onClick={() => respondToInvitation(inv.id, true)}>
+                      <Check className="h-4 w-4 mr-1" /> Accept
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => respondToInvitation(inv.id, false)}>
+                      <X className="h-4 w-4 mr-1" /> Decline
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Admin: pending join requests */}
         {isAdmin && joinRequests.length > 0 && (
