@@ -581,6 +581,51 @@ export default function Feed() {
           </Card>
         )}
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editingPost} onOpenChange={(open) => !open && setEditingPost(null)}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Post</DialogTitle>
+            <DialogDescription>Update your post content and privacy</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-feed-content">Content</Label>
+              <Textarea
+                id="edit-feed-content"
+                className="min-h-[150px]"
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Privacy</Label>
+              <Select value={editPrivacy} onValueChange={(v) => setEditPrivacy(v as PostPrivacy)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="public">
+                    <span className="flex items-center"><Globe className="mr-2 h-4 w-4" />Public</span>
+                  </SelectItem>
+                  <SelectItem value="friends">
+                    <span className="flex items-center"><UsersIcon className="mr-2 h-4 w-4" />Followers</span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingPost(null)} disabled={editSaving}>
+              Cancel
+            </Button>
+            <Button onClick={saveEdit} disabled={editSaving}>
+              {editSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
