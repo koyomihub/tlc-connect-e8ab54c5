@@ -1005,7 +1005,23 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "teacher" | "officer" | "student"
+      app_role:
+        | "admin"
+        | "teacher"
+        | "officer"
+        | "student"
+        | "officer_cs"
+        | "teacher_cs"
+        | "officer_fec"
+        | "teacher_fec"
+        | "officer_ybc"
+        | "teacher_ybc"
+        | "officer_sc"
+        | "teacher_sc"
+        | "officer_tl"
+        | "teacher_tl"
+        | "officer_tlc"
+        | "teacher_tlc"
       notification_type:
         | "like"
         | "comment"
@@ -1142,7 +1158,24 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "teacher", "officer", "student"],
+      app_role: [
+        "admin",
+        "teacher",
+        "officer",
+        "student",
+        "officer_cs",
+        "teacher_cs",
+        "officer_fec",
+        "teacher_fec",
+        "officer_ybc",
+        "teacher_ybc",
+        "officer_sc",
+        "teacher_sc",
+        "officer_tl",
+        "teacher_tl",
+        "officer_tlc",
+        "teacher_tlc",
+      ],
       notification_type: [
         "like",
         "comment",
