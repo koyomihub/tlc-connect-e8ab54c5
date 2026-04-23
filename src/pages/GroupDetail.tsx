@@ -76,8 +76,9 @@ export default function GroupDetail() {
   }, [isAdmin, id]);
 
   useEffect(() => {
-    if (!user || !id || isMember) return;
-    checkPendingRequest();
+    if (!user || !id) return;
+    if (!isMember) checkPendingRequest();
+    fetchPendingInvitations();
   }, [user, id, isMember]);
 
   const fetchGroup = async () => {
