@@ -356,6 +356,23 @@ export default function GroupDetail() {
     else { toast({ title: 'Left group' }); navigate('/groups'); }
   };
 
+  const removeMember = async (memberId: string, memberName?: string) => {
+    if (memberId === group?.creator_id) {
+      toast({ title: 'Cannot remove the owner', variant: 'destructive' });
+      return;
+    }
+    const { error } = await supabase
+      .from('group_members').delete()
+      .eq('group_id', id).eq('user_id', memberId);
+    if (error) {
+      toast({ title: 'Error removing member', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: `Removed ${memberName || 'member'} from the group` });
+      fetchMembers();
+      fetchGroup();
+    }
+  };
+
   const deleteGroup = async () => {
     const { error } = await supabase.from('groups').delete().eq('id', id);
     if (error) toast({ title: 'Error deleting group', description: error.message, variant: 'destructive' });
