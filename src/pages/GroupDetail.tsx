@@ -420,7 +420,11 @@ export default function GroupDetail() {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Invite People</DialogTitle>
-                    <DialogDescription>Search for people to invite to this group.</DialogDescription>
+                    <DialogDescription>
+                      {inviteSearch.trim()
+                        ? 'Search results'
+                        : 'People you follow are shown below. You can also search for anyone.'}
+                    </DialogDescription>
                   </DialogHeader>
                   <Input
                     placeholder="Search by name..."
@@ -428,7 +432,7 @@ export default function GroupDetail() {
                     onChange={(e) => setInviteSearch(e.target.value)}
                   />
                   <div className="max-h-64 overflow-y-auto space-y-2">
-                    {inviteResults.map((p) => (
+                    {(inviteSearch.trim() ? inviteResults : followers).map((p) => (
                       <div key={p.id} className="flex items-center justify-between p-2 rounded hover:bg-accent">
                         <div className="flex items-center space-x-2">
                           <Avatar className="h-8 w-8">
@@ -440,8 +444,13 @@ export default function GroupDetail() {
                         <Button size="sm" onClick={() => sendInvite(p.id)}>Invite</Button>
                       </div>
                     ))}
-                    {inviteSearch && inviteResults.length === 0 && (
+                    {inviteSearch.trim() && inviteResults.length === 0 && (
                       <p className="text-sm text-muted-foreground text-center py-4">No people found</p>
+                    )}
+                    {!inviteSearch.trim() && followers.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        You're not following anyone yet. Use the search above to find people.
+                      </p>
                     )}
                   </div>
                 </DialogContent>
