@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building2, Plus, ArrowLeft } from 'lucide-react';
+import { Building2, Plus, ArrowLeft, ImageIcon, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -32,6 +32,27 @@ export default function OrganizationDetail() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newPost, setNewPost] = useState({ title: '', content: '' });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Image too large', description: 'Max 5MB', variant: 'destructive' });
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const clearImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   useEffect(() => {
     if (id) {
@@ -82,22 +103,41 @@ export default function OrganizationDetail() {
 
   const createPost = async () => {
     if (!newPost.title.trim() || !newPost.content.trim()) {
-      toast({ title: 'Missing fields', description: 'Please fill in all fields', variant: 'destructive' });
+      toast({ title: 'Missing fields', description: 'Please fill in title and content', variant: 'destructive' });
       return;
     }
-    const { error } = await supabase.from('organization_posts').insert({
-      organization_id: id!,
-      user_id: user?.id!,
-      title: newPost.title,
-      content: newPost.content,
-    });
-    if (error) {
-      toast({ title: 'Error creating post', description: error.message, variant: 'destructive' });
-    } else {
+    setUploading(true);
+    try {
+      let imageUrl: string | null = null;
+      if (imageFile && user) {
+        const ext = imageFile.name.split('.').pop();
+        const fileName = `${user.id}/org-${Date.now()}-${Math.random()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from('posts')
+          .upload(fileName, imageFile);
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage.from('posts').getPublicUrl(fileName);
+        imageUrl = publicUrl;
+      }
+
+      const { error } = await supabase.from('organization_posts').insert({
+        organization_id: id!,
+        user_id: user?.id!,
+        title: newPost.title,
+        content: newPost.content,
+        image_url: imageUrl,
+      });
+      if (error) throw error;
+
       setNewPost({ title: '', content: '' });
+      clearImage();
       setIsDialogOpen(false);
       fetchPosts();
       toast({ title: 'Post created successfully!' });
+    } catch (error: any) {
+      toast({ title: 'Error creating post', description: error.message, variant: 'destructive' });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -185,12 +225,48 @@ export default function OrganizationDetail() {
                           onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label>Image (optional)</Label>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleImageSelect}
+                        />
+                        {imagePreview ? (
+                          <div className="relative">
+                            <img src={imagePreview} alt="Preview" className="rounded-lg max-h-[300px] w-full object-cover" />
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="icon"
+                              className="absolute top-2 right-2 h-7 w-7"
+                              onClick={clearImage}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
+                          >
+                            <ImageIcon className="h-4 w-4 mr-2" />
+                            Add image
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={uploading}>
                         Cancel
                       </Button>
-                      <Button onClick={createPost}>Create Post</Button>
+                      <Button onClick={createPost} disabled={uploading}>
+                        {uploading ? 'Posting...' : 'Create Post'}
+                      </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
