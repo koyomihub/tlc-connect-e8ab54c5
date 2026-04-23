@@ -989,6 +989,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_post_in_organization: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
       get_follower_count: { Args: { profile_id: string }; Returns: number }
       get_following_count: { Args: { profile_id: string }; Returns: number }
       has_role: {
