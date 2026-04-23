@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Heart, MessageCircle, ArrowLeft, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, MessageCircle, ArrowLeft, Trash2, ChevronLeft, ChevronRight, Reply } from 'lucide-react';
 import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -50,6 +50,57 @@ export default function PostDetail() {
   const [isLiked, setIsLiked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const commentInputRef = useState<HTMLTextAreaElement | null>(null);
+
+  const handleReply = (target: Comment) => {
+    const name = target.profiles?.display_name || 'user';
+    const mention = `@[${name}](${target.user_id}) `;
+    setNewComment((prev) => {
+      // Avoid stacking duplicate mentions
+      if (prev.startsWith(mention)) return prev;
+      return mention + prev.replace(/^@\[[^\]]+\]\([^)]+\)\s*/, '');
+    });
+    // Scroll to and focus the textarea
+    setTimeout(() => {
+      const el = document.getElementById('new-comment-textarea') as HTMLTextAreaElement | null;
+      el?.focus();
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
+  };
+
+  // Renders comment content with @[Name](userId) mentions as clickable highlighted links
+  const renderCommentContent = (content: string) => {
+    const regex = /@\[([^\]]+)\]\(([0-9a-fA-F-]{36})\)/g;
+    const parts: Array<JSX.Element | string> = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    let key = 0;
+    while ((match = regex.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(content.slice(lastIndex, match.index));
+      }
+      const name = match[1];
+      const userId = match[2];
+      parts.push(
+        <button
+          key={`m-${key++}`}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/profile/${userId}`);
+          }}
+          className="font-semibold text-primary hover:underline"
+        >
+          @{name}
+        </button>
+      );
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < content.length) {
+      parts.push(content.slice(lastIndex));
+    }
+    return parts;
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -336,7 +387,8 @@ export default function PostDetail() {
 
           <div className="space-y-4 mb-6">
             <Textarea
-              placeholder="Write a comment..."
+              id="new-comment-textarea"
+              placeholder="Write a comment... Use the Reply button to mention someone."
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
             />
@@ -370,17 +422,32 @@ export default function PostDetail() {
                         {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                       </p>
                     </div>
-                    {user?.id === comment.user_id && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteComment(comment.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {user && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleReply(comment)}
+                          title="Reply"
+                        >
+                          <Reply className="h-3 w-3 mr-1" />
+                          Reply
+                        </Button>
+                      )}
+                      {user?.id === comment.user_id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteComment(comment.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground/90">{comment.content}</p>
+                  <p className="mt-2 text-sm text-muted-foreground/90 whitespace-pre-wrap break-words">
+                    {renderCommentContent(comment.content)}
+                  </p>
                 </div>
               </div>
             ))}
