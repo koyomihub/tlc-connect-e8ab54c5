@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import {
-  ArrowLeft, Send, Users, Edit, Trash2, Crown, Camera, UserPlus, Lock, Globe, Check, X, Inbox,
+  ArrowLeft, Send, Users, Edit, Trash2, Crown, Camera, UserPlus, Lock, Globe, Check, X, Inbox, UserMinus, Shield,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { awardTokens } from '@/lib/awardTokens';
@@ -54,6 +54,7 @@ export default function GroupDetail() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [followers, setFollowers] = useState<any[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
+  const [membersDialogOpen, setMembersDialogOpen] = useState(false);
   const [repositioning, setRepositioning] = useState(false);
   const [coverPosition, setCoverPosition] = useState<string>('center');
   const [draftPosition, setDraftPosition] = useState<string>('center');
