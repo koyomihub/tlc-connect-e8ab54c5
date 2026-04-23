@@ -466,30 +466,54 @@ export default function Feed() {
 
           return (
             <Card key={post.id} className="p-6">
-              <div className="flex items-start space-x-3 mb-4">
-                <Avatar 
-                  className="cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => navigate(`/profile/${post.user_id}`)}
-                >
-                  <AvatarImage src={post.profiles?.avatar_url} />
-                  <AvatarFallback>
-                    {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="space-y-1">
-                  <p 
-                    className="font-semibold cursor-pointer hover:text-primary transition-colors"
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start space-x-3 flex-1">
+                  <Avatar
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={() => navigate(`/profile/${post.user_id}`)}
                   >
-                    {post.profiles?.display_name}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                    <span>
-                      {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-                    </span>
-                    <PostPrivacyBadge privacy={post.privacy} />
+                    <AvatarImage src={post.profiles?.avatar_url} />
+                    <AvatarFallback>
+                      {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="space-y-1">
+                    <p
+                      className="font-semibold cursor-pointer hover:text-primary transition-colors"
+                      onClick={() => navigate(`/profile/${post.user_id}`)}
+                    >
+                      {post.profiles?.display_name}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                      <span>
+                        {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                      </span>
+                      <PostPrivacyBadge privacy={post.privacy} />
+                    </div>
                   </div>
                 </div>
+                {post.user_id === user?.id && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEdit(post)}>
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => deletePost(post.id)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
 
               <p className="mb-4 whitespace-pre-wrap">{post.content}</p>
