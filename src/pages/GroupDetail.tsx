@@ -839,9 +839,13 @@ export default function GroupDetail() {
                     {group.name}
                     {isPrivate ? <Lock className="h-4 w-4 text-muted-foreground" /> : <Globe className="h-4 w-4 text-muted-foreground" />}
                   </h1>
-                  <p className="text-sm text-muted-foreground">
-                    {group.members_count} members • {isPrivate ? 'Private' : 'Public'}
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setMembersDialogOpen(true)}
+                    className="text-sm text-muted-foreground hover:text-foreground transition text-left"
+                  >
+                    <span className="underline-offset-2 hover:underline">{group.members_count} members</span> • {isPrivate ? 'Private' : 'Public'}
+                  </button>
                   {creatorProfile && (
                     <p className="text-xs text-muted-foreground mt-1">
                       Created by {creatorProfile.display_name}
