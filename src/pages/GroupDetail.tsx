@@ -46,6 +46,7 @@ export default function GroupDetail() {
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
   const [inviteSearch, setInviteSearch] = useState('');
   const [inviteResults, setInviteResults] = useState<any[]>([]);
+  const [invitedUserIds, setInvitedUserIds] = useState<Set<string>>(new Set());
   const [uploadingPhoto, setUploadingPhoto] = useState<false | 'cover' | 'avatar'>(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -80,6 +81,35 @@ export default function GroupDetail() {
     if (!isMember) checkPendingRequest();
     fetchPendingInvitations();
   }, [user, id, isMember]);
+
+  useEffect(() => {
+    if (inviteDialogOpen && id) {
+      fetchExistingInvites();
+    }
+  }, [inviteDialogOpen, id]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel(`group-detail-${id}-changes`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'groups', filter: `id=eq.${id}` }, () => {
+        fetchGroup();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'group_join_requests', filter: `group_id=eq.${id}` }, () => {
+        if (isAdmin) fetchJoinRequests();
+        if (user && !isMember) checkPendingRequest();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'group_invitations', filter: `group_id=eq.${id}` }, () => {
+        if (inviteDialogOpen) fetchExistingInvites();
+        if (user) fetchPendingInvitations();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, inviteDialogOpen, isAdmin, isMember, user]);
 
   const fetchGroup = async () => {
     const { data } = await supabase
@@ -156,6 +186,16 @@ export default function GroupDetail() {
     setPendingInvitations(data || []);
   };
 
+  const fetchExistingInvites = async () => {
+    const { data } = await supabase
+      .from('group_invitations')
+      .select('invitee_id')
+      .eq('group_id', id)
+      .eq('status', 'pending');
+
+    setInvitedUserIds(new Set((data || []).map((invite) => invite.invitee_id)));
+  };
+
   const respondToInvitation = async (invitationId: string, accept: boolean) => {
     if (accept) {
       // Add as member first, then mark accepted
@@ -179,13 +219,32 @@ export default function GroupDetail() {
   };
 
   const fetchJoinRequests = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('group_join_requests')
-      .select(`*, profiles:user_id (id, display_name, avatar_url)`)
+      .select('*')
       .eq('group_id', id)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
-    setJoinRequests(data || []);
+
+    if (error || !data?.length) {
+      setJoinRequests(data || []);
+      return;
+    }
+
+    const requesterIds = [...new Set(data.map((request) => request.user_id))];
+    const { data: requesterProfiles } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_url')
+      .in('id', requesterIds);
+
+    const profileMap = new Map((requesterProfiles || []).map((profile) => [profile.id, profile]));
+
+    setJoinRequests(
+      data.map((request) => ({
+        ...request,
+        profiles: profileMap.get(request.user_id) || null,
+      }))
+    );
   };
 
   const fetchMessages = async () => {
@@ -374,6 +433,12 @@ export default function GroupDetail() {
 
   const sendInvite = async (inviteeId: string) => {
     if (!user) return;
+
+    if (invitedUserIds.has(inviteeId)) {
+      toast({ title: 'Already invited', description: 'This person already has a pending invitation.' });
+      return;
+    }
+
     const { error } = await supabase
       .from('group_invitations')
       .insert({ group_id: id, inviter_id: user.id, invitee_id: inviteeId });
@@ -381,6 +446,7 @@ export default function GroupDetail() {
       toast({ title: 'Could not send invite', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Invite sent!' });
+      setInvitedUserIds((prev) => new Set(prev).add(inviteeId));
       setInviteResults((prev) => prev.filter((p) => p.id !== inviteeId));
       setFollowers((prev) => prev.filter((p) => p.id !== inviteeId));
     }
@@ -473,6 +539,9 @@ export default function GroupDetail() {
                   />
                   <div className="max-h-64 overflow-y-auto space-y-2">
                     {(inviteSearch.trim() ? inviteResults : followers).map((p) => (
+                      (() => {
+                        const alreadyInvited = invitedUserIds.has(p.id);
+                        return (
                       <div key={p.id} className="flex items-center justify-between p-2 rounded hover:bg-accent">
                         <div className="flex items-center space-x-2">
                           <Avatar className="h-8 w-8">
@@ -481,8 +550,12 @@ export default function GroupDetail() {
                           </Avatar>
                           <span className="text-sm">{p.display_name}</span>
                         </div>
-                        <Button size="sm" onClick={() => sendInvite(p.id)}>Invite</Button>
+                         <Button size="sm" variant={alreadyInvited ? 'outline' : 'default'} disabled={alreadyInvited} onClick={() => sendInvite(p.id)}>
+                           {alreadyInvited ? 'Already Invited' : 'Invite'}
+                         </Button>
                       </div>
+                        );
+                      })()
                     ))}
                     {inviteSearch.trim() && inviteResults.length === 0 && (
                       <p className="text-sm text-muted-foreground text-center py-4">No people found</p>

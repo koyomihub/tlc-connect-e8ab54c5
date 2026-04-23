@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { resolveNotificationTarget } from '@/lib/notificationNavigation';
 
 export function NotificationBell() {
   const { user } = useAuth();
@@ -76,12 +77,9 @@ export function NotificationBell() {
     if (!notification.is_read) {
       await markAsRead(notification.id);
     }
-    if (notification.type === 'follow' && notification.actor_id) {
-      navigate(`/profile/${notification.actor_id}`);
-    } else if (notification.post_id) {
-      navigate(`/posts/${notification.post_id}`);
-    } else if (notification.actor_id) {
-      navigate(`/profile/${notification.actor_id}`);
+    const target = await resolveNotificationTarget(notification, user?.id);
+    if (target) {
+      navigate(target);
     }
   };
 
