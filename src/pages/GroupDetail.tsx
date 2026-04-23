@@ -270,10 +270,22 @@ export default function GroupDetail() {
 
   const joinGroup = async () => {
     if (isPrivate) {
-      // Request to join
-      const { error } = await supabase
+      // Request to join (re-open if previously rejected/withdrawn)
+      const { data: existing } = await supabase
         .from('group_join_requests')
-        .insert({ group_id: id, user_id: user?.id });
+        .select('id, status')
+        .eq('group_id', id)
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      const { error } = existing
+        ? await supabase
+            .from('group_join_requests')
+            .update({ status: 'pending', updated_at: new Date().toISOString() })
+            .eq('id', existing.id)
+        : await supabase
+            .from('group_join_requests')
+            .insert({ group_id: id, user_id: user?.id });
       if (error) {
         toast({ title: 'Could not send request', description: error.message, variant: 'destructive' });
       } else {

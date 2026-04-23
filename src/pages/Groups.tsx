@@ -125,9 +125,21 @@ export default function Groups() {
 
   const requestToJoin = async (groupId: string) => {
     if (!user) return;
-    const { error } = await supabase
+    const { data: existing } = await supabase
       .from('group_join_requests')
-      .insert({ group_id: groupId, user_id: user.id });
+      .select('id, status')
+      .eq('group_id', groupId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const { error } = existing
+      ? await supabase
+          .from('group_join_requests')
+          .update({ status: 'pending', updated_at: new Date().toISOString() })
+          .eq('id', existing.id)
+      : await supabase
+          .from('group_join_requests')
+          .insert({ group_id: groupId, user_id: user.id });
 
     if (error) {
       toast({ title: 'Could not send request', description: error.message, variant: 'destructive' });
