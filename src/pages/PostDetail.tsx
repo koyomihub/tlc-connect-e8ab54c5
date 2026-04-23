@@ -50,7 +50,7 @@ export default function PostDetail() {
   const [isLiked, setIsLiked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const commentInputRef = useState<HTMLTextAreaElement | null>(null);
+  
 
   const handleReply = (target: Comment) => {
     const name = target.profiles?.display_name || 'user';
