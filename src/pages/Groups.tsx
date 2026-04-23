@@ -61,6 +61,24 @@ export default function Groups() {
     }
   }, [user]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel('groups-directory-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'groups' },
+        () => {
+          fetchGroups();
+          if (user) fetchMyGroups();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const fetchGroups = async () => {
     const { data } = await supabase
       .from('groups')
