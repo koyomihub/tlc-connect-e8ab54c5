@@ -322,11 +322,23 @@ export default function Admin() {
                       <SelectTrigger>
                         <SelectValue placeholder="Choose role" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-80">
                         <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="teacher">Teacher</SelectItem>
-                        <SelectItem value="officer">Officer</SelectItem>
                         <SelectItem value="student">Student</SelectItem>
+                        <SelectItem value="teacher">Teacher (generic)</SelectItem>
+                        <SelectItem value="officer">Officer (generic)</SelectItem>
+                        <SelectItem value="teacher_cs">Teacher — Computer Society</SelectItem>
+                        <SelectItem value="officer_cs">Officer — Computer Society</SelectItem>
+                        <SelectItem value="teacher_fec">Teacher — Future Educators Club</SelectItem>
+                        <SelectItem value="officer_fec">Officer — Future Educators Club</SelectItem>
+                        <SelectItem value="teacher_ybc">Teacher — Young Businessman Club</SelectItem>
+                        <SelectItem value="officer_ybc">Officer — Young Businessman Club</SelectItem>
+                        <SelectItem value="teacher_sc">Teacher — Student Council</SelectItem>
+                        <SelectItem value="officer_sc">Officer — Student Council</SelectItem>
+                        <SelectItem value="teacher_tl">Teacher — The Lewisian</SelectItem>
+                        <SelectItem value="officer_tl">Officer — The Lewisian</SelectItem>
+                        <SelectItem value="teacher_tlc">Teacher — The Lewis College</SelectItem>
+                        <SelectItem value="officer_tlc">Officer — The Lewis College</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

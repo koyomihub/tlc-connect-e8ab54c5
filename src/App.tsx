@@ -15,6 +15,7 @@ import Rewards from "./pages/Rewards";
 import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
 import Organizations from "./pages/Organizations";
+import OrganizationDetail from "./pages/OrganizationDetail";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import Notifications from "./pages/Notifications";
@@ -106,6 +107,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Organizations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizations/:id"
+              element={
+                <ProtectedRoute>
+                  <OrganizationDetail />
                 </ProtectedRoute>
               }
             />
