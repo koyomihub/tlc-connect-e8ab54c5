@@ -48,6 +48,12 @@ export default function GroupDetail() {
   const [inviteResults, setInviteResults] = useState<any[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [followers, setFollowers] = useState<any[]>([]);
+  const [repositioning, setRepositioning] = useState(false);
+  const [coverPosition, setCoverPosition] = useState<string>('center');
+  const [draftPosition, setDraftPosition] = useState<string>('center');
+  const coverRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
 
   useEffect(() => {
     fetchGroup();
@@ -84,7 +90,24 @@ export default function GroupDetail() {
       setGroupEditData({ name: data.name, description: data.description || '' });
       setIsCreator(data.creator_id === user?.id);
       setCreatorProfile(data.profiles);
+      const pos = (data as any).cover_position || 'center';
+      setCoverPosition(pos);
+      setDraftPosition(pos);
     }
+  };
+
+  const fetchFollowers = async () => {
+    if (!user) return;
+    // People the current user follows
+    const { data } = await supabase
+      .from('follows')
+      .select('following_id, profiles:following_id (id, display_name, avatar_url)')
+      .eq('follower_id', user.id);
+    const memberIds = new Set(members.map((m) => m.user_id));
+    const list = (data || [])
+      .map((row: any) => row.profiles)
+      .filter((p: any) => p && !memberIds.has(p.id));
+    setFollowers(list);
   };
 
   const fetchMembers = async () => {
@@ -286,6 +309,14 @@ export default function GroupDetail() {
     }
   };
 
+  // Load followers when invite dialog opens
+  useEffect(() => {
+    if (inviteDialogOpen) {
+      setInviteSearch('');
+      fetchFollowers();
+    }
+  }, [inviteDialogOpen, members, user?.id]);
+
   // Invite people: search profiles
   useEffect(() => {
     const run = async () => {
@@ -311,7 +342,49 @@ export default function GroupDetail() {
     } else {
       toast({ title: 'Invite sent!' });
       setInviteResults((prev) => prev.filter((p) => p.id !== inviteeId));
+      setFollowers((prev) => prev.filter((p) => p.id !== inviteeId));
     }
+  };
+
+  // Cover photo reposition (drag vertically to set object-position)
+  const handleCoverPointerDown = (e: React.PointerEvent) => {
+    if (!repositioning) return;
+    draggingRef.current = true;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    updateDraftFromPointer(e);
+  };
+  const handleCoverPointerMove = (e: React.PointerEvent) => {
+    if (!repositioning || !draggingRef.current) return;
+    updateDraftFromPointer(e);
+  };
+  const handleCoverPointerUp = () => { draggingRef.current = false; };
+
+  const updateDraftFromPointer = (e: React.PointerEvent) => {
+    const el = coverRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+    const pct = Math.round((y / rect.height) * 100);
+    setDraftPosition(`center ${pct}%`);
+  };
+
+  const saveCoverPosition = async () => {
+    const { error } = await supabase
+      .from('groups')
+      .update({ cover_position: draftPosition } as any)
+      .eq('id', id);
+    if (error) {
+      toast({ title: 'Could not save position', description: error.message, variant: 'destructive' });
+    } else {
+      setCoverPosition(draftPosition);
+      setRepositioning(false);
+      toast({ title: 'Cover position saved' });
+    }
+  };
+
+  const cancelReposition = () => {
+    setDraftPosition(coverPosition);
+    setRepositioning(false);
   };
 
   if (!group) {
@@ -347,7 +420,11 @@ export default function GroupDetail() {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Invite People</DialogTitle>
-                    <DialogDescription>Search for people to invite to this group.</DialogDescription>
+                    <DialogDescription>
+                      {inviteSearch.trim()
+                        ? 'Search results'
+                        : 'People you follow are shown below. You can also search for anyone.'}
+                    </DialogDescription>
                   </DialogHeader>
                   <Input
                     placeholder="Search by name..."
@@ -355,7 +432,7 @@ export default function GroupDetail() {
                     onChange={(e) => setInviteSearch(e.target.value)}
                   />
                   <div className="max-h-64 overflow-y-auto space-y-2">
-                    {inviteResults.map((p) => (
+                    {(inviteSearch.trim() ? inviteResults : followers).map((p) => (
                       <div key={p.id} className="flex items-center justify-between p-2 rounded hover:bg-accent">
                         <div className="flex items-center space-x-2">
                           <Avatar className="h-8 w-8">
@@ -367,8 +444,13 @@ export default function GroupDetail() {
                         <Button size="sm" onClick={() => sendInvite(p.id)}>Invite</Button>
                       </div>
                     ))}
-                    {inviteSearch && inviteResults.length === 0 && (
+                    {inviteSearch.trim() && inviteResults.length === 0 && (
                       <p className="text-sm text-muted-foreground text-center py-4">No people found</p>
+                    )}
+                    {!inviteSearch.trim() && followers.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        You're not following anyone yet. Use the search above to find people.
+                      </p>
                     )}
                   </div>
                 </DialogContent>
@@ -441,38 +523,78 @@ export default function GroupDetail() {
         </div>
 
         <Card className="overflow-hidden">
-          {group.image_url && (
-            <div className="h-48 w-full bg-muted overflow-hidden">
-              <img src={group.image_url} alt={group.name} className="w-full h-full object-cover" />
-            </div>
-          )}
+          <div
+            ref={coverRef}
+            onPointerDown={handleCoverPointerDown}
+            onPointerMove={handleCoverPointerMove}
+            onPointerUp={handleCoverPointerUp}
+            onPointerCancel={handleCoverPointerUp}
+            className={`relative h-48 w-full overflow-hidden ${
+              group.image_url ? 'bg-muted' : 'bg-gradient-primary'
+            } ${repositioning ? 'cursor-grab active:cursor-grabbing select-none' : ''}`}
+          >
+            {group.image_url ? (
+              <img
+                src={group.image_url}
+                alt={group.name}
+                draggable={false}
+                className="w-full h-full object-cover pointer-events-none"
+                style={{ objectPosition: repositioning ? draftPosition : coverPosition }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Users className="h-16 w-16 text-white/80" />
+              </div>
+            )}
+
+            {isAdmin && !repositioning && (
+              <div className="absolute bottom-3 right-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="bg-background/90 backdrop-blur border border-border rounded-full px-3 py-1.5 text-xs font-medium shadow hover:bg-accent transition flex items-center gap-1.5"
+                  aria-label="Change cover photo"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                  {uploadingPhoto ? 'Uploading…' : 'Change Cover'}
+                </button>
+                {group.image_url && (
+                  <button
+                    type="button"
+                    onClick={() => setRepositioning(true)}
+                    className="bg-background/90 backdrop-blur border border-border rounded-full px-3 py-1.5 text-xs font-medium shadow hover:bg-accent transition"
+                  >
+                    Reposition
+                  </button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                />
+              </div>
+            )}
+
+            {isAdmin && repositioning && (
+              <>
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur rounded-full px-3 py-1 text-xs shadow">
+                  Drag the image to reposition
+                </div>
+                <div className="absolute bottom-3 right-3 flex gap-2">
+                  <Button size="sm" variant="outline" onClick={cancelReposition}>Cancel</Button>
+                  <Button size="sm" onClick={saveCoverPosition}>Save Position</Button>
+                </div>
+              </>
+            )}
+          </div>
           <CardHeader>
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start space-x-3">
-                <div className="relative">
-                  <div className="w-16 h-16 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
-                    <Users className="h-8 w-8 text-white" />
-                  </div>
-                  {isAdmin && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploadingPhoto}
-                        className="absolute -bottom-1 -right-1 bg-background border border-border rounded-full p-1.5 shadow hover:bg-accent transition"
-                        aria-label="Change group photo"
-                      >
-                        <Camera className="h-3.5 w-3.5" />
-                      </button>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoUpload}
-                        className="hidden"
-                      />
-                    </>
-                  )}
+                <div className="w-16 h-16 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
+                  <Users className="h-8 w-8 text-white" />
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold flex items-center gap-2">
