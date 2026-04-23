@@ -36,29 +36,32 @@ export default function Organizations() {
 
         <div className="grid md:grid-cols-2 gap-4">
           {organizations.map((org) => (
-            <Card
+            <button
               key={org.id}
+              type="button"
               onClick={() => navigate(`/organizations/${org.id}`)}
-              className="hover:shadow-md transition-shadow cursor-pointer hover:border-primary/50"
+              className="text-left"
             >
-              <CardHeader>
-                <div className="flex items-center space-x-3">
-                  {org.logo_url ? (
-                    <img src={org.logo_url} alt={org.name} className="h-12 w-12 rounded-full" />
-                  ) : (
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Building2 className="h-6 w-6 text-primary" />
-                    </div>
-                  )}
-                  <div>
-                    <CardTitle className="text-lg">{org.name}</CardTitle>
-                    {org.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">{org.description}</p>
+              <Card className="hover:shadow-md transition-shadow cursor-pointer hover:border-primary/50 h-full">
+                <CardHeader>
+                  <div className="flex items-center space-x-3">
+                    {org.logo_url ? (
+                      <img src={org.logo_url} alt={org.name} className="h-12 w-12 rounded-full" />
+                    ) : (
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Building2 className="h-6 w-6 text-primary" />
+                      </div>
                     )}
+                    <div>
+                      <CardTitle className="text-lg">{org.name}</CardTitle>
+                      {org.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">{org.description}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-            </Card>
+                </CardHeader>
+              </Card>
+            </button>
           ))}
         </div>
       </div>
