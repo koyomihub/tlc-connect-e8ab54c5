@@ -12,7 +12,7 @@ export default function Index() {
 
   useEffect(() => {
     if (!loading && user) {
-      navigate('/feed');
+      navigate("/feed");
     }
   }, [user, loading, navigate]);
 
@@ -26,8 +26,8 @@ export default function Index() {
             Welcome to TLC-Connect
           </h1>
           <p className="text-xl text-muted-foreground">
-            The blockchain-powered social platform for students, teachers, and organizations. Connect, learn, and earn
-            rewards together.
+            The social platform for students, teachers, and organizations of The Lewis College. Connect, learn, and
+            explore how blockchain works together.
           </p>
           <div className="flex items-center justify-center space-x-4 pt-6">
             <Button size="lg" onClick={() => navigate("/auth")}>
@@ -56,20 +56,10 @@ export default function Index() {
 
           <Card className="p-6 space-y-4 hover:shadow-elegant transition-shadow">
             <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-              <MessageSquare className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold">Discussion Forums</h3>
-            <p className="text-muted-foreground">
-              Create threads, share knowledge, and collaborate on academic topics.
-            </p>
-          </Card>
-
-          <Card className="p-6 space-y-4 hover:shadow-elegant transition-shadow">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
               <Gift className="h-6 w-6 text-primary" />
             </div>
             <h3 className="text-xl font-semibold">Token Rewards</h3>
-            <p className="text-muted-foreground">Earn tokens for participation and engagement on the platform.</p>
+            <p className="text-muted-foreground">Earn test tokens for participation and engagement on the platform.</p>
           </Card>
 
           <Card className="p-6 space-y-4 hover:shadow-elegant transition-shadow">
@@ -78,7 +68,7 @@ export default function Index() {
             </div>
             <h3 className="text-xl font-semibold">NFT Marketplace</h3>
             <p className="text-muted-foreground">
-              Purchase exclusive NFTs and digital collectibles with your earned tokens.
+              Get exclusive NFTs and digital collectibles with your earned test tokens.
             </p>
           </Card>
 
@@ -107,7 +97,7 @@ export default function Index() {
         <Card className="p-12 text-center bg-gradient-primary">
           <h2 className="text-3xl font-bold text-white mb-4">Ready to Join the Community?</h2>
           <p className="text-white/90 mb-8 max-w-2xl mx-auto">
-            Create your account today and start connecting with thousands of students and educators.
+            Connect your TLC account today and start connecting with thousands of students and educators.
           </p>
           <Button size="lg" variant="secondary" onClick={() => navigate("/auth")}>
             Sign Up Now
