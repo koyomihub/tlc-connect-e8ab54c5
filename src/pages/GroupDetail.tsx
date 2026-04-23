@@ -48,6 +48,12 @@ export default function GroupDetail() {
   const [inviteResults, setInviteResults] = useState<any[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [followers, setFollowers] = useState<any[]>([]);
+  const [repositioning, setRepositioning] = useState(false);
+  const [coverPosition, setCoverPosition] = useState<string>('center');
+  const [draftPosition, setDraftPosition] = useState<string>('center');
+  const coverRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
 
   useEffect(() => {
     fetchGroup();
