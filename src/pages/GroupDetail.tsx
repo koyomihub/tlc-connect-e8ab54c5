@@ -79,6 +79,15 @@ export default function GroupDetail() {
   }, [isAdmin, id]);
 
   useEffect(() => {
+    if (isAdmin && searchParams.get('inbox') === 'requests') {
+      setRequestsDialogOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('inbox');
+      setSearchParams(next, { replace: true });
+    }
+  }, [isAdmin, searchParams, setSearchParams]);
+
+  useEffect(() => {
     if (!user || !id) return;
     if (!isMember) checkPendingRequest();
     fetchPendingInvitations();
