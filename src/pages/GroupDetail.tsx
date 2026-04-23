@@ -46,6 +46,7 @@ export default function GroupDetail() {
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
   const [inviteSearch, setInviteSearch] = useState('');
   const [inviteResults, setInviteResults] = useState<any[]>([]);
+  const [invitedUserIds, setInvitedUserIds] = useState<Set<string>>(new Set());
   const [uploadingPhoto, setUploadingPhoto] = useState<false | 'cover' | 'avatar'>(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -80,6 +81,12 @@ export default function GroupDetail() {
     if (!isMember) checkPendingRequest();
     fetchPendingInvitations();
   }, [user, id, isMember]);
+
+  useEffect(() => {
+    if (inviteDialogOpen && id) {
+      fetchExistingInvites();
+    }
+  }, [inviteDialogOpen, id]);
 
   const fetchGroup = async () => {
     const { data } = await supabase
@@ -154,6 +161,16 @@ export default function GroupDetail() {
       .eq('invitee_id', user.id)
       .eq('status', 'pending');
     setPendingInvitations(data || []);
+  };
+
+  const fetchExistingInvites = async () => {
+    const { data } = await supabase
+      .from('group_invitations')
+      .select('invitee_id')
+      .eq('group_id', id)
+      .eq('status', 'pending');
+
+    setInvitedUserIds(new Set((data || []).map((invite) => invite.invitee_id)));
   };
 
   const respondToInvitation = async (invitationId: string, accept: boolean) => {
@@ -374,6 +391,12 @@ export default function GroupDetail() {
 
   const sendInvite = async (inviteeId: string) => {
     if (!user) return;
+
+    if (invitedUserIds.has(inviteeId)) {
+      toast({ title: 'Already invited', description: 'This person already has a pending invitation.' });
+      return;
+    }
+
     const { error } = await supabase
       .from('group_invitations')
       .insert({ group_id: id, inviter_id: user.id, invitee_id: inviteeId });
@@ -381,6 +404,7 @@ export default function GroupDetail() {
       toast({ title: 'Could not send invite', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Invite sent!' });
+      setInvitedUserIds((prev) => new Set(prev).add(inviteeId));
       setInviteResults((prev) => prev.filter((p) => p.id !== inviteeId));
       setFollowers((prev) => prev.filter((p) => p.id !== inviteeId));
     }
