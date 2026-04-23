@@ -212,6 +212,7 @@ export type Database = {
       }
       groups: {
         Row: {
+          cover_position: string | null
           created_at: string | null
           creator_id: string
           description: string | null
@@ -223,6 +224,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          cover_position?: string | null
           created_at?: string | null
           creator_id: string
           description?: string | null
@@ -234,6 +236,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          cover_position?: string | null
           created_at?: string | null
           creator_id?: string
           description?: string | null
