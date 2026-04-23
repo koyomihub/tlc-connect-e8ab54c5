@@ -286,28 +286,32 @@ export default function GroupDetail() {
     else { toast({ title: 'Group updated!' }); setEditDialogOpen(false); fetchGroup(); }
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = (kind: 'cover' | 'avatar') => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    setUploadingPhoto(true);
+    setUploadingPhoto(kind);
     try {
       const ext = file.name.split('.').pop();
-      const path = `group-photos/${id}-${Date.now()}.${ext}`;
+      const path = `group-photos/${id}-${kind}-${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from('posts')
         .upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from('posts').getPublicUrl(path);
+      const update = kind === 'cover'
+        ? { image_url: urlData.publicUrl }
+        : { avatar_url: urlData.publicUrl };
       const { error: updateError } = await supabase
-        .from('groups').update({ image_url: urlData.publicUrl }).eq('id', id);
+        .from('groups').update(update as any).eq('id', id);
       if (updateError) throw updateError;
-      toast({ title: 'Group photo updated!' });
+      toast({ title: kind === 'cover' ? 'Cover photo updated!' : 'Group photo updated!' });
       fetchGroup();
     } catch (err: any) {
       toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
     } finally {
       setUploadingPhoto(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      const ref = kind === 'cover' ? coverInputRef : avatarInputRef;
+      if (ref.current) ref.current.value = '';
     }
   };
 
