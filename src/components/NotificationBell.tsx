@@ -76,8 +76,12 @@ export function NotificationBell() {
     if (!notification.is_read) {
       await markAsRead(notification.id);
     }
-    if (notification.post_id) {
+    if (notification.type === 'follow' && notification.actor_id) {
+      navigate(`/profile/${notification.actor_id}`);
+    } else if (notification.post_id) {
       navigate(`/posts/${notification.post_id}`);
+    } else if (notification.actor_id) {
+      navigate(`/profile/${notification.actor_id}`);
     }
   };
 

@@ -70,8 +70,12 @@ export default function Notifications() {
         .update({ is_read: true })
         .eq('id', notification.id);
     }
-    if (notification.post_id) {
+    if (notification.type === 'follow' && notification.actor_id) {
+      navigate(`/profile/${notification.actor_id}`);
+    } else if (notification.post_id) {
       navigate(`/posts/${notification.post_id}`);
+    } else if (notification.actor_id) {
+      navigate(`/profile/${notification.actor_id}`);
     }
   };
 
@@ -112,7 +116,7 @@ export default function Notifications() {
             notifications.map((notification) => (
               <Card
                 key={notification.id}
-                className={`transition-all hover:shadow-md ${notification.post_id ? 'cursor-pointer' : ''} ${
+                className={`transition-all hover:shadow-md ${(notification.post_id || notification.actor_id) ? 'cursor-pointer' : ''} ${
                   !notification.is_read ? 'border-primary bg-accent/50' : ''
                 }`}
                 onClick={() => handleNotificationClick(notification)}
