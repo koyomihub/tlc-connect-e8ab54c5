@@ -432,24 +432,41 @@ export default function Feed() {
               <p className="mb-4 whitespace-pre-wrap">{post.content}</p>
 
               {post.image_urls && post.image_urls.length > 0 ? (
-                <div className={`grid gap-2 mb-4 ${post.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                  {post.image_urls.map((url: string, index: number) => (
+                post.image_urls.length === 1 ? (
+                  <div className="mb-4 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
                     <img
-                      key={index}
-                      src={url}
-                      alt={`Post image ${index + 1}`}
-                      className="w-full rounded-lg max-h-[400px] object-cover cursor-pointer"
+                      src={post.image_urls[0]}
+                      alt="Post image"
+                      className="max-h-[500px] w-auto max-w-full object-contain cursor-pointer"
                       onClick={() => navigate(`/posts/${post.id}`)}
                     />
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="mb-4 flex gap-2 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1 scroll-smooth">
+                    {post.image_urls.map((url: string, index: number) => (
+                      <div
+                        key={index}
+                        className="snap-start shrink-0 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden max-w-full"
+                      >
+                        <img
+                          src={url}
+                          alt={`Post image ${index + 1}`}
+                          className="max-h-[500px] w-auto max-w-[85vw] sm:max-w-[500px] object-contain cursor-pointer"
+                          onClick={() => navigate(`/posts/${post.id}`)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )
               ) : post.image_url ? (
-                <img
-                  src={post.image_url}
-                  alt="Post"
-                  className="w-full rounded-lg mb-4 max-h-[500px] object-cover cursor-pointer"
-                  onClick={() => navigate(`/posts/${post.id}`)}
-                />
+                <div className="mb-4 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={post.image_url}
+                    alt="Post"
+                    className="max-h-[500px] w-auto max-w-full object-contain cursor-pointer"
+                    onClick={() => navigate(`/posts/${post.id}`)}
+                  />
+                </div>
               ) : null}
 
               <div className="flex items-center space-x-4 pt-4 border-t">
