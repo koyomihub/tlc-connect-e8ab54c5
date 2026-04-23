@@ -226,16 +226,18 @@ export default function Groups() {
     const isPrivate = group.privacy === 'private';
 
     const card = (
-      <Card className="hover:shadow-lg transition-all h-full overflow-hidden">
-        {group.image_url ? (
-          <div className="h-28 w-full bg-muted overflow-hidden">
+      <Card className="hover:shadow-lg transition-all h-full overflow-hidden flex flex-col">
+        <div className="h-28 w-full bg-muted overflow-hidden flex-shrink-0">
+          {group.image_url ? (
             <img src={group.image_url} alt={group.name} className="w-full h-full object-cover" />
-          </div>
-        ) : null}
-        <CardHeader>
+          ) : (
+            <div className="w-full h-full bg-gradient-primary" />
+          )}
+        </div>
+        <CardHeader className="flex-shrink-0">
           <div className="flex items-start space-x-3">
             <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
-                <GroupAvatar group={group} />
+              <GroupAvatar group={group} />
             </div>
             <div className="flex-1 min-w-0">
               <CardTitle className="line-clamp-1 flex items-center gap-2">
@@ -253,13 +255,13 @@ export default function Groups() {
             </div>
           </div>
         </CardHeader>
-        {group.description && (
-          <CardContent>
-            <p className="text-sm text-muted-foreground line-clamp-2">{group.description}</p>
-          </CardContent>
-        )}
+        <CardContent className="flex-1">
+          <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
+            {group.description || <span className="italic opacity-60">No description provided.</span>}
+          </p>
+        </CardContent>
         {opts.showRequest && !isMember && (
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 flex-shrink-0">
             {hasPending ? (
               <Button
                 variant="outline"
