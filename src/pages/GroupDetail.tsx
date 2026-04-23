@@ -46,9 +46,11 @@ export default function GroupDetail() {
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
   const [inviteSearch, setInviteSearch] = useState('');
   const [inviteResults, setInviteResults] = useState<any[]>([]);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState<false | 'cover' | 'avatar'>(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [followers, setFollowers] = useState<any[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
   const [repositioning, setRepositioning] = useState(false);
   const [coverPosition, setCoverPosition] = useState<string>('center');
   const [draftPosition, setDraftPosition] = useState<string>('center');
