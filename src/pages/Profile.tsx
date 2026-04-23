@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
 
 export default function Profile() {
   const { user } = useAuth();
@@ -340,25 +341,17 @@ export default function Profile() {
                   </p>
                   <p className="mb-3">{post.content}</p>
                   
-                  {post.image_urls && post.image_urls.length > 0 ? (
-                    post.image_urls.length === 1 ? (
-                      <div className="mb-3 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
-                        <img src={post.image_urls[0]} alt="Post image" className="max-h-[400px] w-auto max-w-full object-contain" />
+                  {(() => {
+                    const imgs = post.image_urls && post.image_urls.length > 0
+                      ? post.image_urls
+                      : post.image_url ? [post.image_url] : [];
+                    if (imgs.length === 0) return null;
+                    return (
+                      <div className="mb-3">
+                        <PostImageCarousel images={imgs} alt="Post image" maxHeightClass="max-h-[400px]" />
                       </div>
-                    ) : (
-                      <div className="mb-3 flex gap-2 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1 scroll-smooth">
-                        {post.image_urls.map((url: string, index: number) => (
-                          <div key={index} className="snap-start shrink-0 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
-                            <img src={url} alt={`Post image ${index + 1}`} className="max-h-[400px] w-auto max-w-[85vw] sm:max-w-[400px] object-contain" />
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  ) : post.image_url ? (
-                    <div className="mb-3 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
-                      <img src={post.image_url} alt="Post" className="max-h-[400px] w-auto max-w-full object-contain" />
-                    </div>
-                  ) : null}
+                    );
+                  })()}
 
                   <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                     <span className="flex items-center"><Heart className="h-4 w-4 mr-1" />{post.likes_count || 0}</span>
@@ -386,25 +379,17 @@ export default function Profile() {
                   </div>
                   <p className="mb-3">{repost.posts?.content}</p>
 
-                  {repost.posts?.image_urls && repost.posts.image_urls.length > 0 ? (
-                    repost.posts.image_urls.length === 1 ? (
-                      <div className="mb-3 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
-                        <img src={repost.posts.image_urls[0]} alt="Repost image" className="max-h-[400px] w-auto max-w-full object-contain" />
+                  {(() => {
+                    const imgs = repost.posts?.image_urls && repost.posts.image_urls.length > 0
+                      ? repost.posts.image_urls
+                      : repost.posts?.image_url ? [repost.posts.image_url] : [];
+                    if (imgs.length === 0) return null;
+                    return (
+                      <div className="mb-3">
+                        <PostImageCarousel images={imgs} alt="Repost image" maxHeightClass="max-h-[400px]" />
                       </div>
-                    ) : (
-                      <div className="mb-3 flex gap-2 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1 scroll-smooth">
-                        {repost.posts.image_urls.map((url: string, index: number) => (
-                          <div key={index} className="snap-start shrink-0 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
-                            <img src={url} alt={`Repost image ${index + 1}`} className="max-h-[400px] w-auto max-w-[85vw] sm:max-w-[400px] object-contain" />
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  ) : repost.posts?.image_url ? (
-                    <div className="mb-3 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
-                      <img src={repost.posts.image_url} alt="Repost" className="max-h-[400px] w-auto max-w-full object-contain" />
-                    </div>
-                  ) : null}
+                    );
+                  })()}
 
                   <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                     <span className="flex items-center"><Heart className="h-4 w-4 mr-1" />{repost.posts?.likes_count || 0}</span>
