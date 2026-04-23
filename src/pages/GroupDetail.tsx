@@ -144,6 +144,39 @@ export default function GroupDetail() {
     setHasPendingRequest(!!data);
   };
 
+  const fetchPendingInvitations = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('group_invitations')
+      .select(`*, inviter:profiles!group_invitations_inviter_id_fkey(id, display_name, avatar_url)`)
+      .eq('group_id', id)
+      .eq('invitee_id', user.id)
+      .eq('status', 'pending');
+    setPendingInvitations(data || []);
+  };
+
+  const respondToInvitation = async (invitationId: string, accept: boolean) => {
+    if (accept) {
+      // Add as member first, then mark accepted
+      const { error: memberErr } = await supabase
+        .from('group_members')
+        .insert({ group_id: id, user_id: user?.id });
+      if (memberErr && !memberErr.message.includes('duplicate')) {
+        toast({ title: 'Could not join', description: memberErr.message, variant: 'destructive' });
+        return;
+      }
+      await supabase.from('group_invitations').update({ status: 'accepted' }).eq('id', invitationId);
+      toast({ title: 'Invitation accepted — welcome!' });
+      setIsMember(true);
+      fetchGroup();
+      fetchMembers();
+    } else {
+      await supabase.from('group_invitations').update({ status: 'rejected' }).eq('id', invitationId);
+      toast({ title: 'Invitation declined' });
+    }
+    fetchPendingInvitations();
+  };
+
   const fetchJoinRequests = async () => {
     const { data } = await supabase
       .from('group_join_requests')
