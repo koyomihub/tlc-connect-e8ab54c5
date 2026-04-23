@@ -497,6 +497,9 @@ export default function GroupDetail() {
                   />
                   <div className="max-h-64 overflow-y-auto space-y-2">
                     {(inviteSearch.trim() ? inviteResults : followers).map((p) => (
+                      (() => {
+                        const alreadyInvited = invitedUserIds.has(p.id);
+                        return (
                       <div key={p.id} className="flex items-center justify-between p-2 rounded hover:bg-accent">
                         <div className="flex items-center space-x-2">
                           <Avatar className="h-8 w-8">
@@ -505,8 +508,12 @@ export default function GroupDetail() {
                           </Avatar>
                           <span className="text-sm">{p.display_name}</span>
                         </div>
-                        <Button size="sm" onClick={() => sendInvite(p.id)}>Invite</Button>
+                         <Button size="sm" variant={alreadyInvited ? 'outline' : 'default'} disabled={alreadyInvited} onClick={() => sendInvite(p.id)}>
+                           {alreadyInvited ? 'Already Invited' : 'Invite'}
+                         </Button>
                       </div>
+                        );
+                      })()
                     ))}
                     {inviteSearch.trim() && inviteResults.length === 0 && (
                       <p className="text-sm text-muted-foreground text-center py-4">No people found</p>
