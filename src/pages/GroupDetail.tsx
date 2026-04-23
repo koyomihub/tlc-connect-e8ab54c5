@@ -721,6 +721,38 @@ export default function GroupDetail() {
           </CardHeader>
         </Card>
 
+        {/* Pending invitation for the current user */}
+        {pendingInvitations.length > 0 && !isMember && (
+          <Card className="border-primary">
+            <CardHeader>
+              <h3 className="font-semibold">You have an invitation</h3>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {pendingInvitations.map((inv) => (
+                <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/40">
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={inv.inviter?.avatar_url} />
+                      <AvatarFallback>{inv.inviter?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                    </Avatar>
+                    <p className="text-sm">
+                      <span className="font-medium">{inv.inviter?.display_name || 'Someone'}</span> invited you to join this group
+                    </p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button size="sm" onClick={() => respondToInvitation(inv.id, true)}>
+                      <Check className="h-4 w-4 mr-1" /> Accept
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => respondToInvitation(inv.id, false)}>
+                      <X className="h-4 w-4 mr-1" /> Decline
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Admin: pending join requests */}
         {isAdmin && joinRequests.length > 0 && (
           <Card>
