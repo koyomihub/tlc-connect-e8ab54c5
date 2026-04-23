@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Users, Plus, Search } from 'lucide-react';
+import { Users, Plus, Search, Lock, Globe } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -31,8 +31,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 export default function Groups() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [groups, setGroups] = useState<any[]>([]);
+  const [publicGroups, setPublicGroups] = useState<any[]>([]);
+  const [privateGroups, setPrivateGroups] = useState<any[]>([]);
   const [myGroups, setMyGroups] = useState<any[]>([]);
+  const [memberGroupIds, setMemberGroupIds] = useState<Set<string>>(new Set());
+  const [pendingRequests, setPendingRequests] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('date');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -44,32 +47,33 @@ export default function Groups() {
 
   useEffect(() => {
     fetchGroups();
-    fetchMyGroups();
-  }, []);
+    if (user) {
+      fetchMyGroups();
+      fetchPendingRequests();
+    }
+  }, [user]);
 
   const fetchGroups = async () => {
     const { data } = await supabase
       .from('groups')
       .select('*')
-      .eq('privacy', 'public')
       .order('created_at', { ascending: false });
-    
-    setGroups(data || []);
+
+    setPublicGroups((data || []).filter((g) => g.privacy === 'public'));
+    setPrivateGroups((data || []).filter((g) => g.privacy === 'private'));
   };
 
   const fetchMyGroups = async () => {
     if (!user) return;
-    
     const { data: memberData } = await supabase
       .from('group_members')
       .select('group_id')
       .eq('user_id', user.id);
 
-    if (!memberData) return;
+    const ids = (memberData || []).map((m) => m.group_id);
+    setMemberGroupIds(new Set(ids));
 
-    const groupIds = memberData.map(m => m.group_id);
-    
-    if (groupIds.length === 0) {
+    if (ids.length === 0) {
       setMyGroups([]);
       return;
     }
@@ -77,19 +81,54 @@ export default function Groups() {
     const { data } = await supabase
       .from('groups')
       .select('*')
-      .in('id', groupIds)
+      .in('id', ids)
       .order('created_at', { ascending: false });
-    
+
     setMyGroups(data || []);
+  };
+
+  const fetchPendingRequests = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('group_join_requests')
+      .select('group_id')
+      .eq('user_id', user.id)
+      .eq('status', 'pending');
+    setPendingRequests(new Set((data || []).map((r) => r.group_id)));
+  };
+
+  const requestToJoin = async (groupId: string) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from('group_join_requests')
+      .insert({ group_id: groupId, user_id: user.id });
+
+    if (error) {
+      toast({ title: 'Could not send request', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Request sent', description: 'The group admin will review your request.' });
+      setPendingRequests((prev) => new Set(prev).add(groupId));
+    }
+  };
+
+  const cancelRequest = async (groupId: string) => {
+    if (!user) return;
+    await supabase
+      .from('group_join_requests')
+      .delete()
+      .eq('group_id', groupId)
+      .eq('user_id', user.id);
+    setPendingRequests((prev) => {
+      const next = new Set(prev);
+      next.delete(groupId);
+      return next;
+    });
+    toast({ title: 'Request cancelled' });
   };
 
   const createGroup = async () => {
     if (!newGroup.name.trim()) {
-      toast({
-        title: "Missing name",
-        description: "Please provide a group name",
-        variant: "destructive",
-      });
+      toast({ title: 'Missing name', description: 'Please provide a group name', variant: 'destructive' });
       return;
     }
 
@@ -105,36 +144,19 @@ export default function Groups() {
       .single();
 
     if (groupError) {
-      toast({
-        title: "Error creating group",
-        description: groupError.message,
-        variant: "destructive",
-      });
+      toast({ title: 'Error creating group', description: groupError.message, variant: 'destructive' });
       return;
     }
 
-    // Add creator as admin member
     const { error: memberError } = await supabase
       .from('group_members')
-      .insert({
-        group_id: groupData.id,
-        user_id: user?.id,
-        is_admin: true,
-      } as any);
+      .insert({ group_id: groupData.id, user_id: user?.id, is_admin: true } as any);
 
     if (memberError) {
-      toast({
-        title: "Joined partially",
-        description: memberError.message,
-        variant: "destructive",
-      });
+      toast({ title: 'Joined partially', description: memberError.message, variant: 'destructive' });
     }
 
-    toast({
-      title: "Group created!",
-      description: "Redirecting to your new group...",
-    });
-
+    toast({ title: 'Group created!', description: 'Redirecting to your new group...' });
     setNewGroup({ name: '', description: '', privacy: 'public' });
     setDialogOpen(false);
     navigate(`/groups/${groupData.id}`);
@@ -147,25 +169,95 @@ export default function Groups() {
         return sorted.sort((a, b) => a.name.localeCompare(b.name));
       case 'members':
         return sorted.sort((a, b) => (b.members_count || 0) - (a.members_count || 0));
-      case 'date':
       default:
         return sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
   };
 
-  const filteredGroups = sortGroups(
-    groups.filter(group =>
-      group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      group.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  );
+  const filterFn = (g: any) =>
+    g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    g.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
-  const filteredMyGroups = sortGroups(
-    myGroups.filter(group =>
-      group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      group.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  );
+  const filteredPublic = sortGroups(publicGroups.filter(filterFn));
+  const filteredPrivate = sortGroups(privateGroups.filter(filterFn));
+  const filteredMy = sortGroups(myGroups.filter(filterFn));
+
+  const renderGroupCard = (group: any, opts: { showRequest?: boolean } = {}) => {
+    const isMember = memberGroupIds.has(group.id);
+    const hasPending = pendingRequests.has(group.id);
+    const isPrivate = group.privacy === 'private';
+
+    const card = (
+      <Card className="hover:shadow-lg transition-all h-full overflow-hidden">
+        {group.image_url ? (
+          <div className="h-28 w-full bg-muted overflow-hidden">
+            <img src={group.image_url} alt={group.name} className="w-full h-full object-cover" />
+          </div>
+        ) : null}
+        <CardHeader>
+          <div className="flex items-start space-x-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
+              <Users className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <CardTitle className="line-clamp-1 flex items-center gap-2">
+                {group.name}
+                {isPrivate ? (
+                  <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                ) : (
+                  <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                {group.members_count || 0} {group.members_count === 1 ? 'member' : 'members'}
+                {isPrivate && ' • Private'}
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        {group.description && (
+          <CardContent>
+            <p className="text-sm text-muted-foreground line-clamp-2">{group.description}</p>
+          </CardContent>
+        )}
+        {opts.showRequest && !isMember && (
+          <CardContent className="pt-0">
+            {hasPending ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={(e) => {
+                  e.preventDefault();
+                  cancelRequest(group.id);
+                }}
+              >
+                Pending — Cancel Request
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                className="w-full"
+                onClick={(e) => {
+                  e.preventDefault();
+                  requestToJoin(group.id);
+                }}
+              >
+                Request to Join
+              </Button>
+            )}
+          </CardContent>
+        )}
+      </Card>
+    );
+
+    // Private non-members can preview the group page (no chat); make whole card clickable
+    return (
+      <Link key={group.id} to={`/groups/${group.id}`} className="block">
+        {card}
+      </Link>
+    );
+  };
 
   return (
     <MainLayout>
@@ -176,11 +268,9 @@ export default function Groups() {
               <Users className="h-8 w-8 mr-2 text-primary" />
               Groups
             </h1>
-            <p className="text-muted-foreground mt-1">
-              Join groups and connect with your community
-            </p>
+            <p className="text-muted-foreground mt-1">Join groups and connect with your community</p>
           </div>
-          
+
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button className="shadow-md">
@@ -191,9 +281,7 @@ export default function Groups() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Create New Group</DialogTitle>
-                <DialogDescription>
-                  Start a new community group
-                </DialogDescription>
+                <DialogDescription>Start a new community group</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -225,8 +313,8 @@ export default function Groups() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="public">Public - Anyone can join</SelectItem>
-                      <SelectItem value="private">Private - Invite only</SelectItem>
+                      <SelectItem value="public">Public — Anyone can join</SelectItem>
+                      <SelectItem value="private">Private — Request to join, admin approval</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -265,42 +353,17 @@ export default function Groups() {
         </div>
 
         <Tabs defaultValue="public" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="public">Public Groups</TabsTrigger>
+            <TabsTrigger value="private">Private Groups</TabsTrigger>
             <TabsTrigger value="my-groups">My Groups</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="public" className="space-y-4 mt-6">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredGroups.map((group) => (
-                <Link key={group.id} to={`/groups/${group.id}`}>
-                  <Card className="hover:shadow-lg transition-all cursor-pointer h-full">
-                    <CardHeader>
-                      <div className="flex items-start space-x-3">
-                        <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
-                          <Users className="h-6 w-6 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="line-clamp-1">{group.name}</CardTitle>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {group.members_count || 0} {group.members_count === 1 ? 'member' : 'members'}
-                          </p>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    {group.description && (
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {group.description}
-                        </p>
-                      </CardContent>
-                    )}
-                  </Card>
-                </Link>
-              ))}
+              {filteredPublic.map((g) => renderGroupCard(g))}
             </div>
-
-            {filteredGroups.length === 0 && (
+            {filteredPublic.length === 0 && (
               <Card className="text-center py-12">
                 <CardContent>
                   <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -312,43 +375,32 @@ export default function Groups() {
             )}
           </TabsContent>
 
+          <TabsContent value="private" className="space-y-4 mt-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredPrivate.map((g) => renderGroupCard(g, { showRequest: true }))}
+            </div>
+            {filteredPrivate.length === 0 && (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <Lock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">
+                    {searchQuery ? 'No private groups found matching your search.' : 'No private groups yet.'}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
           <TabsContent value="my-groups" className="space-y-4 mt-6">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredMyGroups.map((group) => (
-                <Link key={group.id} to={`/groups/${group.id}`}>
-                  <Card className="hover:shadow-lg transition-all cursor-pointer h-full">
-                    <CardHeader>
-                      <div className="flex items-start space-x-3">
-                        <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
-                          <Users className="h-6 w-6 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="line-clamp-1">{group.name}</CardTitle>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {group.members_count || 0} {group.members_count === 1 ? 'member' : 'members'}
-                            {group.privacy === 'private' && ' • Private'}
-                          </p>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    {group.description && (
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {group.description}
-                        </p>
-                      </CardContent>
-                    )}
-                  </Card>
-                </Link>
-              ))}
+              {filteredMy.map((g) => renderGroupCard(g))}
             </div>
-
-            {filteredMyGroups.length === 0 && (
+            {filteredMy.length === 0 && (
               <Card className="text-center py-12">
                 <CardContent>
                   <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">
-                    {searchQuery ? 'No groups found matching your search.' : 'You haven\'t joined any groups yet.'}
+                    {searchQuery ? 'No groups found matching your search.' : "You haven't joined any groups yet."}
                   </p>
                 </CardContent>
               </Card>
