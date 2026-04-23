@@ -28,6 +28,14 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+const GroupAvatar = ({ group }: { group: any }) => {
+  if (group.avatar_url) {
+    return <img src={group.avatar_url} alt={group.name} className="w-full h-full object-cover" />;
+  }
+
+  return <Users className="h-6 w-6 text-white" />;
+};
+
 export default function Groups() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -197,7 +205,7 @@ export default function Groups() {
         <CardHeader>
           <div className="flex items-start space-x-3">
             <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
-              <Users className="h-6 w-6 text-white" />
+                <GroupAvatar group={group} />
             </div>
             <div className="flex-1 min-w-0">
               <CardTitle className="line-clamp-1 flex items-center gap-2">
