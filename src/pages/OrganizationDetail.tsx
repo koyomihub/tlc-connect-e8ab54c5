@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building2, Plus, ArrowLeft, ImageIcon, X } from 'lucide-react';
+import { Building2, Plus, ArrowLeft, Image as ImageIcon, X, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -21,6 +21,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
 
 export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>();
@@ -30,29 +37,19 @@ export default function OrganizationDetail() {
   const [posts, setPosts] = useState<any[]>([]);
   const [canPost, setCanPost] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // Create dialog state
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newPost, setNewPost] = useState({ title: '', content: '' });
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: 'Image too large', description: 'Max 5MB', variant: 'destructive' });
-      return;
-    }
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-  };
-
-  const clearImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
+  // Edit dialog state
+  const [editingPost, setEditingPost] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({ title: '', content: '' });
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -62,9 +59,7 @@ export default function OrganizationDetail() {
   }, [id]);
 
   useEffect(() => {
-    if (user && id) {
-      checkPermissions();
-    }
+    if (user && id) checkPermissions();
   }, [user, id]);
 
   const fetchOrganization = async () => {
@@ -96,11 +91,39 @@ export default function OrganizationDetail() {
       _org_id: id,
     });
     if (!error) setCanPost(!!data);
-
     const { data: adminData } = await supabase.rpc('is_admin', { _user_id: user.id });
     setIsAdmin(!!adminData);
   };
 
+  // ---------- Image helpers ----------
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setImageFiles((prev) => [...prev, ...files]);
+    setImagePreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
+  };
+
+  const removeImage = (index: number) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const uploadImages = async (): Promise<string[]> => {
+    if (!imageFiles.length || !user) return [];
+    return Promise.all(
+      imageFiles.map(async (file) => {
+        const ext = file.name.split('.').pop();
+        const fileName = `${user.id}/org-${Date.now()}-${Math.random()}.${ext}`;
+        const { error } = await supabase.storage.from('posts').upload(fileName, file);
+        if (error) throw error;
+        const { data: { publicUrl } } = supabase.storage.from('posts').getPublicUrl(fileName);
+        return publicUrl;
+      })
+    );
+  };
+
+  // ---------- Create ----------
   const createPost = async () => {
     if (!newPost.title.trim() || !newPost.content.trim()) {
       toast({ title: 'Missing fields', description: 'Please fill in title and content', variant: 'destructive' });
@@ -108,30 +131,21 @@ export default function OrganizationDetail() {
     }
     setUploading(true);
     try {
-      let imageUrl: string | null = null;
-      if (imageFile && user) {
-        const ext = imageFile.name.split('.').pop();
-        const fileName = `${user.id}/org-${Date.now()}-${Math.random()}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from('posts')
-          .upload(fileName, imageFile);
-        if (uploadError) throw uploadError;
-        const { data: { publicUrl } } = supabase.storage.from('posts').getPublicUrl(fileName);
-        imageUrl = publicUrl;
-      }
-
+      const urls = await uploadImages();
       const { error } = await supabase.from('organization_posts').insert({
         organization_id: id!,
         user_id: user?.id!,
         title: newPost.title,
         content: newPost.content,
-        image_url: imageUrl,
+        image_url: urls[0] || null,
+        image_urls: urls,
       });
       if (error) throw error;
-
       setNewPost({ title: '', content: '' });
-      clearImage();
-      setIsDialogOpen(false);
+      setImageFiles([]);
+      setImagePreviews([]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setIsCreateOpen(false);
       fetchPosts();
       toast({ title: 'Post created successfully!' });
     } catch (error: any) {
@@ -141,6 +155,34 @@ export default function OrganizationDetail() {
     }
   };
 
+  // ---------- Edit ----------
+  const openEdit = (post: any) => {
+    setEditingPost(post);
+    setEditForm({ title: post.title, content: post.content });
+  };
+
+  const saveEdit = async () => {
+    if (!editingPost) return;
+    if (!editForm.title.trim() || !editForm.content.trim()) {
+      toast({ title: 'Missing fields', variant: 'destructive' });
+      return;
+    }
+    setEditSaving(true);
+    const { error } = await supabase
+      .from('organization_posts')
+      .update({ title: editForm.title, content: editForm.content })
+      .eq('id', editingPost.id);
+    setEditSaving(false);
+    if (error) {
+      toast({ title: 'Error updating post', description: error.message, variant: 'destructive' });
+    } else {
+      setEditingPost(null);
+      fetchPosts();
+      toast({ title: 'Post updated' });
+    }
+  };
+
+  // ---------- Delete ----------
   const deletePost = async (postId: string) => {
     if (!confirm('Delete this post?')) return;
     const { error } = await supabase.from('organization_posts').delete().eq('id', postId);
@@ -193,7 +235,7 @@ export default function OrganizationDetail() {
               </div>
 
               {canPost && (
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                   <DialogTrigger asChild>
                     <Button>
                       <Plus className="h-4 w-4 mr-2" />
@@ -226,42 +268,49 @@ export default function OrganizationDetail() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Image (optional)</Label>
+                        <Label>Images (optional)</Label>
                         <input
                           ref={fileInputRef}
                           type="file"
                           accept="image/*"
+                          multiple
                           className="hidden"
                           onChange={handleImageSelect}
                         />
-                        {imagePreview ? (
-                          <div className="relative">
-                            <img src={imagePreview} alt="Preview" className="rounded-lg max-h-[300px] w-full object-cover" />
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="icon"
-                              className="absolute top-2 right-2 h-7 w-7"
-                              onClick={clearImage}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
+                        {imagePreviews.length > 0 && (
+                          <div className="grid grid-cols-2 gap-2">
+                            {imagePreviews.map((preview, index) => (
+                              <div key={index} className="relative">
+                                <img
+                                  src={preview}
+                                  alt={`Preview ${index + 1}`}
+                                  className="rounded-lg max-h-48 w-full object-cover"
+                                />
+                                <Button
+                                  variant="destructive"
+                                  size="icon"
+                                  className="absolute top-2 right-2 h-7 w-7"
+                                  onClick={() => removeImage(index)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
                           </div>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploading}
-                          >
-                            <ImageIcon className="h-4 w-4 mr-2" />
-                            Add image
-                          </Button>
                         )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploading}
+                        >
+                          <ImageIcon className="h-4 w-4 mr-2" />
+                          Add Images
+                        </Button>
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={uploading}>
+                      <Button variant="outline" onClick={() => setIsCreateOpen(false)} disabled={uploading}>
                         Cancel
                       </Button>
                       <Button onClick={createPost} disabled={uploading}>
@@ -278,7 +327,12 @@ export default function OrganizationDetail() {
         {/* Posts */}
         <div className="space-y-4">
           {posts.map((post) => {
-            const canDelete = isAdmin || post.user_id === user?.id;
+            const isOwner = post.user_id === user?.id;
+            const canDelete = isAdmin || isOwner;
+            const imgs: string[] = post.image_urls && post.image_urls.length > 0
+              ? post.image_urls
+              : post.image_url ? [post.image_url] : [];
+
             return (
               <Card key={post.id}>
                 <CardHeader>
@@ -297,27 +351,42 @@ export default function OrganizationDetail() {
                         </p>
                       </div>
                     </div>
-                    {canDelete && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deletePost(post.id)}
-                        className="text-destructive"
-                      >
-                        Delete
-                      </Button>
+
+                    {(isOwner || canDelete) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {isOwner && (
+                            <DropdownMenuItem onClick={() => openEdit(post)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                          )}
+                          {canDelete && (
+                            <DropdownMenuItem
+                              onClick={() => deletePost(post.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </div>
                 </CardHeader>
                 <CardContent>
                   <h3 className="text-lg font-semibold mb-2">{post.title}</h3>
                   <p className="whitespace-pre-wrap text-muted-foreground">{post.content}</p>
-                  {post.image_url && (
-                    <img
-                      src={post.image_url}
-                      alt={post.title}
-                      className="mt-4 w-full rounded-lg max-h-[400px] object-cover"
-                    />
+                  {imgs.length > 0 && (
+                    <div className="mt-4">
+                      <PostImageCarousel images={imgs} alt={post.title} />
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -327,14 +396,49 @@ export default function OrganizationDetail() {
           {posts.length === 0 && (
             <Card className="text-center py-12">
               <CardContent>
-                <p className="text-muted-foreground">
-                  No posts yet for this organization.
-                </p>
+                <p className="text-muted-foreground">No posts yet for this organization.</p>
               </CardContent>
             </Card>
           )}
         </div>
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editingPost} onOpenChange={(open) => !open && setEditingPost(null)}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Post</DialogTitle>
+            <DialogDescription>Update your post's title and content</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Title</Label>
+              <Input
+                id="edit-title"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-content">Content</Label>
+              <Textarea
+                id="edit-content"
+                className="min-h-[150px]"
+                value={editForm.content}
+                onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingPost(null)} disabled={editSaving}>
+              Cancel
+            </Button>
+            <Button onClick={saveEdit} disabled={editSaving}>
+              {editSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

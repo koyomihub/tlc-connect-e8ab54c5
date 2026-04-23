@@ -8,12 +8,28 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Heart, MessageCircle, Send, Image as ImageIcon, X, Repeat2, Newspaper, Globe, Users as UsersIcon } from 'lucide-react';
+import { Heart, MessageCircle, Send, Image as ImageIcon, X, Repeat2, Newspaper, Globe, Users as UsersIcon, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
 import { PostPrivacyBadge } from '@/components/feed/PostPrivacyBadge';
 import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 type PostPrivacy = 'public' | 'friends';
 
