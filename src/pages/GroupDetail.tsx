@@ -196,13 +196,32 @@ export default function GroupDetail() {
   };
 
   const fetchJoinRequests = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('group_join_requests')
-      .select(`*, profiles:user_id (id, display_name, avatar_url)`)
+      .select('*')
       .eq('group_id', id)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
-    setJoinRequests(data || []);
+
+    if (error || !data?.length) {
+      setJoinRequests(data || []);
+      return;
+    }
+
+    const requesterIds = [...new Set(data.map((request) => request.user_id))];
+    const { data: requesterProfiles } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_url')
+      .in('id', requesterIds);
+
+    const profileMap = new Map((requesterProfiles || []).map((profile) => [profile.id, profile]));
+
+    setJoinRequests(
+      data.map((request) => ({
+        ...request,
+        profiles: profileMap.get(request.user_id) || null,
+      }))
+    );
   };
 
   const fetchMessages = async () => {
