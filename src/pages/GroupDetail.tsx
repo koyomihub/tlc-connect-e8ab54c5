@@ -309,6 +309,14 @@ export default function GroupDetail() {
     }
   };
 
+  // Load followers when invite dialog opens
+  useEffect(() => {
+    if (inviteDialogOpen) {
+      setInviteSearch('');
+      fetchFollowers();
+    }
+  }, [inviteDialogOpen, members, user?.id]);
+
   // Invite people: search profiles
   useEffect(() => {
     const run = async () => {
