@@ -342,7 +342,49 @@ export default function GroupDetail() {
     } else {
       toast({ title: 'Invite sent!' });
       setInviteResults((prev) => prev.filter((p) => p.id !== inviteeId));
+      setFollowers((prev) => prev.filter((p) => p.id !== inviteeId));
     }
+  };
+
+  // Cover photo reposition (drag vertically to set object-position)
+  const handleCoverPointerDown = (e: React.PointerEvent) => {
+    if (!repositioning) return;
+    draggingRef.current = true;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    updateDraftFromPointer(e);
+  };
+  const handleCoverPointerMove = (e: React.PointerEvent) => {
+    if (!repositioning || !draggingRef.current) return;
+    updateDraftFromPointer(e);
+  };
+  const handleCoverPointerUp = () => { draggingRef.current = false; };
+
+  const updateDraftFromPointer = (e: React.PointerEvent) => {
+    const el = coverRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+    const pct = Math.round((y / rect.height) * 100);
+    setDraftPosition(`center ${pct}%`);
+  };
+
+  const saveCoverPosition = async () => {
+    const { error } = await supabase
+      .from('groups')
+      .update({ cover_position: draftPosition } as any)
+      .eq('id', id);
+    if (error) {
+      toast({ title: 'Could not save position', description: error.message, variant: 'destructive' });
+    } else {
+      setCoverPosition(draftPosition);
+      setRepositioning(false);
+      toast({ title: 'Cover position saved' });
+    }
+  };
+
+  const cancelReposition = () => {
+    setDraftPosition(coverPosition);
+    setRepositioning(false);
   };
 
   if (!group) {
