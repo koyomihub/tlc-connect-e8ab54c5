@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import {
-  ArrowLeft, Send, Users, Edit, Trash2, Crown, Camera, UserPlus, Lock, Globe, Check, X,
+  ArrowLeft, Send, Users, Edit, Trash2, Crown, Camera, UserPlus, Lock, Globe, Check, X, Inbox,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { awardTokens } from '@/lib/awardTokens';
@@ -28,6 +28,7 @@ import {
 export default function GroupDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const [group, setGroup] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -38,6 +39,7 @@ export default function GroupDetail() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [requestsDialogOpen, setRequestsDialogOpen] = useState(false);
   const [groupEditData, setGroupEditData] = useState({ name: '', description: '' });
   const [members, setMembers] = useState<any[]>([]);
   const [selectedNewOwner, setSelectedNewOwner] = useState('');
@@ -75,6 +77,15 @@ export default function GroupDetail() {
   useEffect(() => {
     if (isAdmin && id) fetchJoinRequests();
   }, [isAdmin, id]);
+
+  useEffect(() => {
+    if (isAdmin && searchParams.get('inbox') === 'requests') {
+      setRequestsDialogOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('inbox');
+      setSearchParams(next, { replace: true });
+    }
+  }, [isAdmin, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (!user || !id) return;
@@ -270,10 +281,22 @@ export default function GroupDetail() {
 
   const joinGroup = async () => {
     if (isPrivate) {
-      // Request to join
-      const { error } = await supabase
+      // Request to join (re-open if previously rejected/withdrawn)
+      const { data: existing } = await supabase
         .from('group_join_requests')
-        .insert({ group_id: id, user_id: user?.id });
+        .select('id, status')
+        .eq('group_id', id)
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      const { error } = existing
+        ? await supabase
+            .from('group_join_requests')
+            .update({ status: 'pending', updated_at: new Date().toISOString() })
+            .eq('id', existing.id)
+        : await supabase
+            .from('group_join_requests')
+            .insert({ group_id: id, user_id: user?.id });
       if (error) {
         toast({ title: 'Could not send request', description: error.message, variant: 'destructive' });
       } else {
@@ -569,6 +592,61 @@ export default function GroupDetail() {
                 </DialogContent>
               </Dialog>
             )}
+            {isAdmin && isPrivate && (
+              <Dialog open={requestsDialogOpen} onOpenChange={setRequestsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="relative">
+                    <Inbox className="h-4 w-4 mr-2" />
+                    Requests
+                    {joinRequests.length > 0 && (
+                      <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-semibold h-5 min-w-5 px-1.5">
+                        {joinRequests.length}
+                      </span>
+                    )}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Join Requests</DialogTitle>
+                    <DialogDescription>
+                      Review people who asked to join this group.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="max-h-96 overflow-y-auto space-y-3">
+                    {joinRequests.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        No pending requests
+                      </p>
+                    ) : (
+                      joinRequests.map((req) => (
+                        <div key={req.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/40">
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-9 w-9">
+                              <AvatarImage src={req.profiles?.avatar_url} />
+                              <AvatarFallback>{req.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-medium">{req.profiles?.display_name || 'Unknown'}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Requested {formatDistanceToNow(new Date(req.created_at), { addSuffix: true })}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button size="sm" onClick={() => respondToRequest(req.id, true)}>
+                              <Check className="h-4 w-4 mr-1" /> Accept
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => respondToRequest(req.id, false)}>
+                              <X className="h-4 w-4 mr-1" /> Reject
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
             {isMember && !isCreator && (
               <Button variant="outline" size="sm" onClick={leaveGroup}>Leave Group</Button>
             )}
@@ -818,41 +896,6 @@ export default function GroupDetail() {
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => respondToInvitation(inv.id, false)}>
                       <X className="h-4 w-4 mr-1" /> Decline
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Admin: pending join requests */}
-        {isAdmin && joinRequests.length > 0 && (
-          <Card>
-            <CardHeader>
-              <h3 className="font-semibold">Pending Join Requests ({joinRequests.length})</h3>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {joinRequests.map((req) => (
-                <div key={req.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/40">
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={req.profiles?.avatar_url} />
-                      <AvatarFallback>{req.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">{req.profiles?.display_name || 'Unknown'}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Requested {formatDistanceToNow(new Date(req.created_at), { addSuffix: true })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button size="sm" onClick={() => respondToRequest(req.id, true)}>
-                      <Check className="h-4 w-4 mr-1" /> Accept
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => respondToRequest(req.id, false)}>
-                      <X className="h-4 w-4 mr-1" /> Reject
                     </Button>
                   </div>
                 </div>

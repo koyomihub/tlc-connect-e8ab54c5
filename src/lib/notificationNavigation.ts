@@ -96,7 +96,7 @@ export const resolveNotificationTarget = async (notification: any, currentUserId
     if (invitationGroupId) return `/groups/${invitationGroupId}`;
 
     const adminSideGroupId = await getGroupFromAdminSideRequest(currentUserId, notification.actor_id);
-    if (adminSideGroupId) return `/groups/${adminSideGroupId}`;
+    if (adminSideGroupId) return `/groups/${adminSideGroupId}?inbox=requests`;
 
     const requesterSideGroupId = await getGroupFromRequesterSideRequest(currentUserId, notification.actor_id);
     if (requesterSideGroupId) return `/groups/${requesterSideGroupId}`;
