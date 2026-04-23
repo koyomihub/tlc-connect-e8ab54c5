@@ -265,11 +265,13 @@ export default function PostDetail() {
 
           {post.image_urls && post.image_urls.length > 0 ? (
             <div className="relative mb-4">
-              <img
-                src={post.image_urls[currentImageIndex]}
-                alt={`Post image ${currentImageIndex + 1}`}
-                className="w-full rounded-lg max-h-[500px] object-cover"
-              />
+              <div className="rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
+                <img
+                  src={post.image_urls[currentImageIndex]}
+                  alt={`Post image ${currentImageIndex + 1}`}
+                  className="max-h-[600px] w-auto max-w-full object-contain"
+                />
+              </div>
               {post.image_urls.length > 1 && (
                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-2 bg-black/50 px-4 py-2 rounded-full">
                   {post.image_urls.map((_, index) => (
@@ -285,11 +287,13 @@ export default function PostDetail() {
               )}
             </div>
           ) : post.image_url ? (
-            <img
-              src={post.image_url}
-              alt="Post"
-              className="w-full rounded-lg mb-4 max-h-[500px] object-cover"
-            />
+            <div className="mb-4 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
+              <img
+                src={post.image_url}
+                alt="Post"
+                className="max-h-[600px] w-auto max-w-full object-contain"
+              />
+            </div>
           ) : null}
 
           <div className="flex items-center space-x-4 pt-4 border-t">
