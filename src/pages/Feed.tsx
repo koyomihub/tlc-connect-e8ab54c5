@@ -8,12 +8,27 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Heart, MessageCircle, Send, Image as ImageIcon, X, Repeat2, Newspaper, Globe, Users as UsersIcon } from 'lucide-react';
+import { Heart, MessageCircle, Send, Image as ImageIcon, X, Repeat2, Newspaper, Globe, Users as UsersIcon, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
 import { PostPrivacyBadge } from '@/components/feed/PostPrivacyBadge';
 import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 type PostPrivacy = 'public' | 'friends';
 
@@ -48,6 +63,52 @@ export default function Feed() {
   const [userProfile, setUserProfile] = useState<{ avatar_url?: string; display_name?: string } | null>(null);
   const [postPrivacy, setPostPrivacy] = useState<PostPrivacy>('public');
   const [followingIds, setFollowingIds] = useState<string[]>([]);
+
+  // Edit/delete state
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editPrivacy, setEditPrivacy] = useState<PostPrivacy>('public');
+  const [editSaving, setEditSaving] = useState(false);
+
+  const openEdit = (post: Post) => {
+    setEditingPost(post);
+    setEditContent(post.content);
+    setEditPrivacy(post.privacy);
+  };
+
+  const saveEdit = async () => {
+    if (!editingPost) return;
+    if (!editContent.trim()) {
+      toast({ title: 'Content required', variant: 'destructive' });
+      return;
+    }
+    setEditSaving(true);
+    const { error } = await supabase
+      .from('posts')
+      .update({ content: editContent, privacy: editPrivacy })
+      .eq('id', editingPost.id);
+    setEditSaving(false);
+    if (error) {
+      toast({ title: 'Error updating post', description: error.message, variant: 'destructive' });
+    } else {
+      setPosts((prev) =>
+        prev.map((p) => (p.id === editingPost.id ? { ...p, content: editContent, privacy: editPrivacy } : p))
+      );
+      setEditingPost(null);
+      toast({ title: 'Post updated' });
+    }
+  };
+
+  const deletePost = async (postId: string) => {
+    if (!confirm('Delete this post? This cannot be undone.')) return;
+    const { error } = await supabase.from('posts').delete().eq('id', postId);
+    if (error) {
+      toast({ title: 'Error deleting post', description: error.message, variant: 'destructive' });
+    } else {
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      toast({ title: 'Post deleted' });
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -404,30 +465,54 @@ export default function Feed() {
 
           return (
             <Card key={post.id} className="p-6">
-              <div className="flex items-start space-x-3 mb-4">
-                <Avatar 
-                  className="cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => navigate(`/profile/${post.user_id}`)}
-                >
-                  <AvatarImage src={post.profiles?.avatar_url} />
-                  <AvatarFallback>
-                    {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="space-y-1">
-                  <p 
-                    className="font-semibold cursor-pointer hover:text-primary transition-colors"
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start space-x-3 flex-1">
+                  <Avatar
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={() => navigate(`/profile/${post.user_id}`)}
                   >
-                    {post.profiles?.display_name}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                    <span>
-                      {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-                    </span>
-                    <PostPrivacyBadge privacy={post.privacy} />
+                    <AvatarImage src={post.profiles?.avatar_url} />
+                    <AvatarFallback>
+                      {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="space-y-1">
+                    <p
+                      className="font-semibold cursor-pointer hover:text-primary transition-colors"
+                      onClick={() => navigate(`/profile/${post.user_id}`)}
+                    >
+                      {post.profiles?.display_name}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                      <span>
+                        {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                      </span>
+                      <PostPrivacyBadge privacy={post.privacy} />
+                    </div>
                   </div>
                 </div>
+                {post.user_id === user?.id && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEdit(post)}>
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => deletePost(post.id)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
 
               <p className="mb-4 whitespace-pre-wrap">{post.content}</p>
@@ -495,6 +580,51 @@ export default function Feed() {
           </Card>
         )}
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editingPost} onOpenChange={(open) => !open && setEditingPost(null)}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Post</DialogTitle>
+            <DialogDescription>Update your post content and privacy</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-feed-content">Content</Label>
+              <Textarea
+                id="edit-feed-content"
+                className="min-h-[150px]"
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Privacy</Label>
+              <Select value={editPrivacy} onValueChange={(v) => setEditPrivacy(v as PostPrivacy)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="public">
+                    <span className="flex items-center"><Globe className="mr-2 h-4 w-4" />Public</span>
+                  </SelectItem>
+                  <SelectItem value="friends">
+                    <span className="flex items-center"><UsersIcon className="mr-2 h-4 w-4" />Followers</span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingPost(null)} disabled={editSaving}>
+              Cancel
+            </Button>
+            <Button onClick={saveEdit} disabled={editSaving}>
+              {editSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
