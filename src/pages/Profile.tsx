@@ -60,6 +60,9 @@ export default function Profile() {
   const { user } = useAuth();
   const { userId } = useParams<{ userId?: string }>();
   const navigate = useNavigate();
+  const { account } = useWallet();
+  const [onChainTLC, setOnChainTLC] = useState<string | null>(null);
+  const [tlcLoading, setTlcLoading] = useState(false);
 
   const profileId = userId || user?.id;
   const isOwnProfile = !userId || userId === user?.id;
