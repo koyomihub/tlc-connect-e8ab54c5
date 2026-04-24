@@ -3,7 +3,8 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Coins, ShoppingBag, Sparkles, Wallet, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { Coins, ShoppingBag, Sparkles, Wallet, ExternalLink, CheckCircle2, Info, Share2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -58,6 +59,36 @@ export default function NFTs() {
   const [purchasing, setPurchasing] = useState(false);
   const [ownedItemIds, setOwnedItemIds] = useState<Set<string>>(new Set());
   const [ownedNFTs, setOwnedNFTs] = useState<OwnedNFT[]>([]);
+  const [sharingId, setSharingId] = useState<string | null>(null);
+
+  const shareToFeed = async (nft: OwnedNFT) => {
+    if (!user || !nft.nft_items) return;
+    setSharingId(nft.id);
+    try {
+      const name = nft.nft_items.name;
+      const content = `Just minted "${name}" on TLC-Connect! 🎉✨\n\nAnother piece added to my on-chain collection — earned through the $TLC token economy. Who's next?`;
+      const { error } = await supabase.from('posts').insert({
+        user_id: user.id,
+        content,
+        image_url: nft.nft_items.image_url,
+        image_urls: [nft.nft_items.image_url],
+        privacy: 'public',
+      });
+      if (error) throw error;
+      toast({
+        title: 'Shared to Feed! 🚀',
+        description: 'Your NFT is now showing off in everyone\'s feed.',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Could not share',
+        description: err.message || 'Something went wrong',
+        variant: 'destructive',
+      });
+    } finally {
+      setSharingId(null);
+    }
+  };
 
   useEffect(() => {
     fetchNFTItems();
@@ -269,6 +300,16 @@ export default function NFTs() {
           </Card>
         </div>
 
+        <Alert className="border-primary/30 bg-primary/5">
+          <Info className="h-4 w-4 text-primary" />
+          <AlertTitle>Heads up: Minting requires POL on the platform wallet</AlertTitle>
+          <AlertDescription className="text-muted-foreground">
+            Each NFT mint costs the platform's owner wallet ~<span className="font-semibold text-foreground">0.1 POL</span> (claim fee) plus gas.
+            Admins should keep at least <span className="font-semibold text-foreground">0.2 POL</span> in the minter wallet to ensure mints don't fail.
+            Users only spend $TLC — no POL needed from your wallet.
+          </AlertDescription>
+        </Alert>
+
         <Tabs defaultValue="available" className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="available">Available NFTs</TabsTrigger>
@@ -389,7 +430,15 @@ export default function NFTs() {
                         </div>
                       )}
                     </CardContent>
-                    <CardFooter>
+                    <CardFooter className="flex flex-col gap-2">
+                      <Button
+                        className="w-full"
+                        onClick={() => shareToFeed(nft)}
+                        disabled={sharingId === nft.id}
+                      >
+                        <Share2 className="h-4 w-4 mr-2" />
+                        {sharingId === nft.id ? 'Sharing...' : 'Share to my Feed'}
+                      </Button>
                       {nft.transaction_hash ? (
                         <Button
                           variant="outline"
