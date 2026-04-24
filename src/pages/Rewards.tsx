@@ -43,10 +43,12 @@ export default function Rewards() {
   const [onChainBalance, setOnChainBalance] = useState<number>(0);
   const [selectedItem, setSelectedItem] = useState<NFTItem | null>(null);
   const [purchasing, setPurchasing] = useState(false);
+  const [ownedItemIds, setOwnedItemIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchNFTItems();
     fetchUserBalance();
+    fetchOwnedNFTs();
   }, [user]);
 
   useEffect(() => {
