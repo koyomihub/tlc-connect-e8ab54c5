@@ -9,6 +9,7 @@ const corsHeaders = {
 
 const AMOY_RPC = "https://rpc-amoy.polygon.technology";
 const BURN_ADDRESS = "0x000000000000000000000000000000000000dEaD";
+const NATIVE_POL_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
 const NEW_TOKEN_SENTINEL = (1n << 256n) - 1n;
 const TLC_DECIMALS = 18;
 
@@ -35,7 +36,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const minterPk = Deno.env.get('MINTER_PRIVATE_KEY')!;
     const tlcAddress = Deno.env.get('TLC_CONTRACT_ADDRESS')!;
-    const nftAddress = Deno.env.get('NFT_CONTRACT_ADDRESS')!;
+    const defaultNftAddress = Deno.env.get('NFT_CONTRACT_ADDRESS')!;
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -103,7 +104,8 @@ serve(async (req) => {
     const provider = new ethers.JsonRpcProvider(AMOY_RPC);
     const minter = new ethers.Wallet(minterPk, provider);
     const tlc = new ethers.Contract(tlcAddress, TLC_ABI, minter);
-    const nft = new ethers.Contract(nftAddress, NFT_ABI, minter);
+    const nftContractAddress = nftItem.contract_address || defaultNftAddress;
+    const nft = new ethers.Contract(nftContractAddress, NFT_ABI, minter);
 
     const priceWei = ethers.parseUnits(String(nftItem.price), TLC_DECIMALS);
     const userBal: bigint = await tlc.balanceOf(userWallet);
