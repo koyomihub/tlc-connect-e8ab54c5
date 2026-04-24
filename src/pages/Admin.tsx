@@ -22,7 +22,7 @@ export default function Admin() {
   const [users, setUsers] = useState<any[]>([]);
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
-  const [threads, setThreads] = useState<any[]>([]);
+  
   const [groups, setGroups] = useState<any[]>([]);
   const [newOrg, setNewOrg] = useState({ name: '', description: '' });
   const [selectedUser, setSelectedUser] = useState<string>('');
