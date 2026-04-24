@@ -116,11 +116,11 @@ serve(async (req) => {
     const allowance: bigint = await tlc.allowance(userWallet, minter.address);
     if (allowance < priceWei) {
       return new Response(JSON.stringify({
-        error: 'Approval required',
         needsApproval: true,
         spender: minter.address,
         amount: priceWei.toString(),
-      }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        message: 'Approval required',
+      }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // 1) Burn $TLC by transferFrom user -> dead address
