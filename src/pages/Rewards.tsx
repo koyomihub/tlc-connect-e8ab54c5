@@ -3,7 +3,8 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Coins, ShoppingBag, Sparkles, Wallet } from 'lucide-react';
+import { Coins, ShoppingBag, Sparkles, Wallet, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
@@ -27,6 +28,17 @@ interface NFTItem {
   total_supply: number;
 }
 
+interface OwnedNFT {
+  id: string;
+  purchased_at: string | null;
+  transaction_hash: string | null;
+  nft_items: {
+    name: string;
+    description: string | null;
+    image_url: string;
+  } | null;
+}
+
 const TLC_CONTRACT = '0xf95368bF95bAB7E83447E249B6C7e53B3bb858b0';
 const AMOY_CHAIN_ID = '0x13882'; // 80002
 const ERC20_ABI = [
@@ -44,6 +56,7 @@ export default function Rewards() {
   const [selectedItem, setSelectedItem] = useState<NFTItem | null>(null);
   const [purchasing, setPurchasing] = useState(false);
   const [ownedItemIds, setOwnedItemIds] = useState<Set<string>>(new Set());
+  const [ownedNFTs, setOwnedNFTs] = useState<OwnedNFT[]>([]);
 
   useEffect(() => {
     fetchNFTItems();
@@ -85,9 +98,12 @@ export default function Rewards() {
     if (!user) return;
     const { data } = await supabase
       .from('user_nfts')
-      .select('nft_item_id')
-      .eq('user_id', user.id);
-    setOwnedItemIds(new Set((data || []).map((r: any) => r.nft_item_id)));
+      .select('id, purchased_at, transaction_hash, nft_item_id, nft_items(name, description, image_url)')
+      .eq('user_id', user.id)
+      .order('purchased_at', { ascending: false });
+    const rows = (data || []) as any[];
+    setOwnedItemIds(new Set(rows.map((r) => r.nft_item_id)));
+    setOwnedNFTs(rows as OwnedNFT[]);
   };
 
   const fetchUserBalance = async () => {
@@ -232,72 +248,154 @@ export default function Rewards() {
           </Card>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {nftItems.map((item) => (
-            <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-all group">
-              <div className="aspect-square overflow-hidden bg-muted">
-                <img
-                  src={item.image_url}
-                  alt={item.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                />
-              </div>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="line-clamp-1">{item.name}</CardTitle>
-                    <CardDescription className="line-clamp-2 mt-1">
-                      {item.description}
-                    </CardDescription>
-                  </div>
-                  {item.available_supply < 10 && (
-                    <Badge variant="destructive" className="ml-2">
-                      {item.available_supply} left
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center text-success font-bold text-xl">
-                    <Coins className="h-5 w-5 mr-1" />
-                    {item.price.toLocaleString()}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {item.available_supply}/{item.total_supply}
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button
-                  className="w-full shadow-sm"
-                  onClick={() => setSelectedItem(item)}
-                  disabled={!account || ownedItemIds.has(item.id) || onChainBalance < item.price}
-                >
-                  <ShoppingBag className="h-4 w-4 mr-2" />
-                  {ownedItemIds.has(item.id)
-                    ? 'Already Minted'
-                    : !account
-                      ? 'Connect Wallet'
-                      : onChainBalance >= item.price
-                        ? 'Mint NFT'
-                        : 'Insufficient $TLC'}
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+        <Tabs defaultValue="available" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="available">Available NFTs</TabsTrigger>
+            <TabsTrigger value="mine">My NFTs {ownedNFTs.length > 0 && `(${ownedNFTs.length})`}</TabsTrigger>
+          </TabsList>
 
-        {nftItems.length === 0 && (
-          <Card className="text-center py-12">
-            <CardContent>
-              <Sparkles className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">
-                No NFTs available at the moment. Check back later!
-              </p>
-            </CardContent>
-          </Card>
-        )}
+          <TabsContent value="available" className="mt-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {nftItems.map((item) => (
+                <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-all group">
+                  <div className="aspect-square overflow-hidden bg-muted">
+                    <img
+                      src={item.image_url}
+                      alt={item.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                  </div>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="line-clamp-1">{item.name}</CardTitle>
+                        <CardDescription className="line-clamp-2 mt-1">
+                          {item.description}
+                        </CardDescription>
+                      </div>
+                      {item.available_supply < 10 && (
+                        <Badge variant="destructive" className="ml-2">
+                          {item.available_supply} left
+                        </Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-success font-bold text-xl">
+                        <Coins className="h-5 w-5 mr-1" />
+                        {item.price.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {item.available_supply}/{item.total_supply}
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button
+                      className="w-full shadow-sm"
+                      onClick={() => setSelectedItem(item)}
+                      disabled={!account || ownedItemIds.has(item.id) || onChainBalance < item.price}
+                    >
+                      <ShoppingBag className="h-4 w-4 mr-2" />
+                      {ownedItemIds.has(item.id)
+                        ? 'Already Minted'
+                        : !account
+                          ? 'Connect Wallet'
+                          : onChainBalance >= item.price
+                            ? 'Mint NFT'
+                            : 'Insufficient $TLC'}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+
+            {nftItems.length === 0 && (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <Sparkles className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    No NFTs available at the moment. Check back later!
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="mine" className="mt-6">
+            {ownedNFTs.length === 0 ? (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <Sparkles className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    You haven't minted any NFTs yet. Head to "Available NFTs" to mint your first one!
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {ownedNFTs.map((nft) => (
+                  <Card key={nft.id} className="overflow-hidden hover:shadow-lg transition-all">
+                    <div className="aspect-square overflow-hidden bg-muted relative">
+                      {nft.nft_items?.image_url && (
+                        <img
+                          src={nft.nft_items.image_url}
+                          alt={nft.nft_items?.name || 'NFT'}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                      <Badge className="absolute top-2 right-2 bg-success text-success-foreground shadow-md">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Minted
+                      </Badge>
+                    </div>
+                    <CardHeader>
+                      <CardTitle className="line-clamp-1">{nft.nft_items?.name || 'NFT'}</CardTitle>
+                      <CardDescription className="line-clamp-2">
+                        {nft.nft_items?.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {nft.purchased_at && (
+                        <div className="text-xs text-muted-foreground">
+                          Minted {new Date(nft.purchased_at).toLocaleString()}
+                        </div>
+                      )}
+                      {nft.transaction_hash && (
+                        <div className="text-xs font-mono text-muted-foreground truncate">
+                          Tx: {nft.transaction_hash.slice(0, 10)}…{nft.transaction_hash.slice(-8)}
+                        </div>
+                      )}
+                    </CardContent>
+                    <CardFooter>
+                      {nft.transaction_hash ? (
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          asChild
+                        >
+                          <a
+                            href={`https://amoy.polygonscan.com/tx/${nft.transaction_hash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            View on Blockchain
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button variant="outline" className="w-full" disabled>
+                          Tx hash unavailable
+                        </Button>
+                      )}
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
 
         <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
           <DialogContent>
