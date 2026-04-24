@@ -260,10 +260,10 @@ export default function Rewards() {
                 <Button
                   className="w-full shadow-sm"
                   onClick={() => setSelectedItem(item)}
-                  disabled={userBalance < item.price}
+                  disabled={!account || onChainBalance < item.price}
                 >
                   <ShoppingBag className="h-4 w-4 mr-2" />
-                  {userBalance >= item.price ? 'Purchase NFT' : 'Insufficient Balance'}
+                  {!account ? 'Connect Wallet' : onChainBalance >= item.price ? 'Mint NFT' : 'Insufficient $TLC'}
                 </Button>
               </CardFooter>
             </Card>
