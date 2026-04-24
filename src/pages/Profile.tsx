@@ -7,43 +7,96 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Camera, Wallet, Coins, Repeat2, Heart, MessageCircle } from 'lucide-react';
+import {
+  Camera,
+  Wallet,
+  Coins,
+  Repeat2,
+  Heart,
+  MessageCircle,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Globe,
+  Users as UsersIcon,
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
+import { PostPrivacyBadge } from '@/components/feed/PostPrivacyBadge';
+import { awardTokens } from '@/lib/awardTokens';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+type PostPrivacy = 'public' | 'friends' | 'private';
+
+interface ActivityItem {
+  kind: 'post' | 'repost';
+  sortDate: string; // created_at of the post or the repost
+  post: any; // joined post with profiles
+  repostId?: string;
+  repostedAt?: string;
+  reposterName?: string;
+}
 
 export default function Profile() {
   const { user } = useAuth();
   const { userId } = useParams<{ userId?: string }>();
   const navigate = useNavigate();
-  
-  // Determine which profile to show
+
   const profileId = userId || user?.id;
   const isOwnProfile = !userId || userId === user?.id;
 
   const [profile, setProfile] = useState<any>(null);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [userPosts, setUserPosts] = useState<any[]>([]);
-  
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [postsCount, setPostsCount] = useState(0);
   const [userGroups, setUserGroups] = useState<any[]>([]);
-  const [userReposts, setUserReposts] = useState<any[]>([]);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
+
+  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
+  const [repostedPosts, setRepostedPosts] = useState<Set<string>>(new Set());
+
   const [formData, setFormData] = useState({
     display_name: '',
     bio: '',
     wallet_address: '',
   });
 
+  // Edit/delete state for own posts
+  const [editingPost, setEditingPost] = useState<any | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editPrivacy, setEditPrivacy] = useState<PostPrivacy>('public');
+  const [editSaving, setEditSaving] = useState(false);
+
   useEffect(() => {
     if (profileId) {
       fetchProfile();
-      fetchUserStats();
+      fetchActivity();
       fetchFollowCounts();
+      fetchUserGroups();
+      if (user) {
+        fetchLiked();
+        fetchReposted();
+      }
       if (!isOwnProfile && user) {
         checkFollowStatus();
       }
@@ -52,13 +105,7 @@ export default function Profile() {
 
   const fetchProfile = async () => {
     if (!profileId) return;
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', profileId)
-      .single();
-
+    const { data } = await supabase.from('profiles').select('*').eq('id', profileId).single();
     if (data) {
       setProfile(data);
       if (isOwnProfile) {
@@ -75,15 +122,24 @@ export default function Profile() {
     if (!profileId) return;
     const { data: followers } = await supabase
       .from('follows')
-      .select('id', { count: 'exact' })
+      .select('id')
       .eq('following_id', profileId);
     setFollowerCount(followers?.length || 0);
 
     const { data: following } = await supabase
       .from('follows')
-      .select('id', { count: 'exact' })
+      .select('id')
       .eq('follower_id', profileId);
     setFollowingCount(following?.length || 0);
+  };
+
+  const fetchUserGroups = async () => {
+    if (!profileId) return;
+    const { data } = await supabase
+      .from('group_members')
+      .select('group_id')
+      .eq('user_id', profileId);
+    setUserGroups(data || []);
   };
 
   const checkFollowStatus = async () => {
@@ -100,82 +156,202 @@ export default function Profile() {
   const toggleFollow = async () => {
     if (!user || !profileId) return;
     if (isFollowing) {
-      await supabase.from('follows').delete()
-        .eq('follower_id', user.id)
-        .eq('following_id', profileId);
+      await supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', profileId);
       setIsFollowing(false);
-      setFollowerCount(prev => Math.max(0, prev - 1));
+      setFollowerCount((p) => Math.max(0, p - 1));
     } else {
-      await supabase.from('follows').insert({
-        follower_id: user.id,
-        following_id: profileId,
-      });
+      await supabase.from('follows').insert({ follower_id: user.id, following_id: profileId });
       setIsFollowing(true);
-      setFollowerCount(prev => prev + 1);
+      setFollowerCount((p) => p + 1);
     }
   };
 
-  const fetchUserStats = async () => {
+  const fetchActivity = async () => {
     if (!profileId) return;
 
-    const { data: posts } = await supabase
+    const [postsRes, repostsRes] = await Promise.all([
+      supabase
+        .from('posts')
+        .select(`*, profiles!posts_user_id_fkey(display_name, avatar_url)`)
+        .eq('user_id', profileId)
+        .eq('is_hidden', false)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('reposts')
+        .select(`id, created_at, posts(*, profiles!posts_user_id_fkey(display_name, avatar_url))`)
+        .eq('user_id', profileId)
+        .order('created_at', { ascending: false }),
+    ]);
+
+    const posts = postsRes.data || [];
+    const reposts = repostsRes.data || [];
+    setPostsCount(posts.length);
+
+    const reposterName = profile?.display_name;
+
+    const items: ActivityItem[] = [
+      ...posts.map((p: any) => ({
+        kind: 'post' as const,
+        sortDate: p.created_at,
+        post: p,
+      })),
+      ...reposts
+        .filter((r: any) => r.posts && !r.posts.is_hidden)
+        .map((r: any) => ({
+          kind: 'repost' as const,
+          sortDate: r.created_at,
+          post: r.posts,
+          repostId: r.id,
+          repostedAt: r.created_at,
+          reposterName,
+        })),
+    ];
+
+    items.sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
+    setActivity(items);
+  };
+
+  const fetchLiked = async () => {
+    if (!user) return;
+    const { data } = await supabase.from('post_likes').select('post_id').eq('user_id', user.id);
+    if (data) setLikedPosts(new Set(data.map((l) => l.post_id)));
+  };
+
+  const fetchReposted = async () => {
+    if (!user) return;
+    const { data } = await supabase.from('reposts').select('post_id').eq('user_id', user.id);
+    if (data) setRepostedPosts(new Set(data.map((r) => r.post_id)));
+  };
+
+  const toggleLike = async (postId: string, postOwnerId: string) => {
+    if (!user) return;
+    const isLiked = likedPosts.has(postId);
+    try {
+      if (isLiked) {
+        await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', user.id);
+        setLikedPosts((prev) => {
+          const s = new Set(prev);
+          s.delete(postId);
+          return s;
+        });
+        setActivity((prev) =>
+          prev.map((it) =>
+            it.post.id === postId
+              ? { ...it, post: { ...it.post, likes_count: Math.max(0, (it.post.likes_count || 0) - 1) } }
+              : it
+          )
+        );
+      } else {
+        await supabase.from('post_likes').insert({ post_id: postId, user_id: user.id });
+        setLikedPosts((prev) => new Set(prev).add(postId));
+        setActivity((prev) =>
+          prev.map((it) =>
+            it.post.id === postId
+              ? { ...it, post: { ...it.post, likes_count: (it.post.likes_count || 0) + 1 } }
+              : it
+          )
+        );
+        if (postOwnerId !== user.id) {
+          awardTokens({ type: 'post_like_received', description: 'Your post received a like', postId });
+        }
+      }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const toggleRepost = async (postId: string) => {
+    if (!user) return;
+    const isReposted = repostedPosts.has(postId);
+    try {
+      if (isReposted) {
+        await supabase.from('reposts').delete().eq('post_id', postId).eq('user_id', user.id);
+        setRepostedPosts((prev) => {
+          const s = new Set(prev);
+          s.delete(postId);
+          return s;
+        });
+        toast({ title: 'Repost removed' });
+      } else {
+        await supabase.from('reposts').insert({ post_id: postId, user_id: user.id });
+        setRepostedPosts((prev) => new Set(prev).add(postId));
+        toast({ title: 'Post reposted!' });
+      }
+      fetchActivity();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const openEdit = (post: any) => {
+    setEditingPost(post);
+    setEditContent(post.content);
+    setEditPrivacy((post.privacy as PostPrivacy) || 'public');
+  };
+
+  const saveEdit = async () => {
+    if (!editingPost) return;
+    if (!editContent.trim()) {
+      toast({ title: 'Content required', variant: 'destructive' });
+      return;
+    }
+    setEditSaving(true);
+    const { error } = await supabase
       .from('posts')
-      .select(`*, profiles!posts_user_id_fkey(display_name, avatar_url)`)
-      .eq('user_id', profileId)
-      .eq('is_hidden', false)
-      .order('created_at', { ascending: false })
-      .limit(10);
-    setUserPosts(posts || []);
+      .update({ content: editContent, privacy: editPrivacy })
+      .eq('id', editingPost.id);
+    setEditSaving(false);
+    if (error) {
+      toast({ title: 'Error updating post', description: error.message, variant: 'destructive' });
+    } else {
+      setActivity((prev) =>
+        prev.map((it) =>
+          it.post.id === editingPost.id
+            ? { ...it, post: { ...it.post, content: editContent, privacy: editPrivacy } }
+            : it
+        )
+      );
+      setEditingPost(null);
+      toast({ title: 'Post updated' });
+    }
+  };
 
-    const { data: reposts } = await supabase
-      .from('reposts')
-      .select(`*, posts(*, profiles!posts_user_id_fkey(display_name, avatar_url))`)
-      .eq('user_id', profileId)
-      .order('created_at', { ascending: false })
-      .limit(5);
-    setUserReposts(reposts || []);
-
-    const { data: memberGroups } = await supabase
-      .from('group_members')
-      .select('group_id')
-      .eq('user_id', profileId);
-    setUserGroups(memberGroups || []);
+  const deletePost = async (postId: string) => {
+    if (!confirm('Delete this post? This cannot be undone.')) return;
+    const { error } = await supabase.from('posts').delete().eq('id', postId);
+    if (error) {
+      toast({ title: 'Error deleting post', description: error.message, variant: 'destructive' });
+    } else {
+      setActivity((prev) => prev.filter((it) => !(it.kind === 'post' && it.post.id === postId)));
+      setPostsCount((c) => Math.max(0, c - 1));
+      toast({ title: 'Post deleted' });
+    }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'cover') => {
     if (!isOwnProfile) return;
     const file = event.target.files?.[0];
     if (!file) return;
-
     setLoading(true);
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user?.id}-${type}-${Math.random()}.${fileExt}`;
       const filePath = `${user?.id}/${type}s/${fileName}`;
-
       const { error: uploadError } = await supabase.storage
         .from('profiles')
         .upload(filePath, file, { upsert: true });
-
       if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('profiles')
-        .getPublicUrl(filePath);
-
+      const { data: { publicUrl } } = supabase.storage.from('profiles').getPublicUrl(filePath);
       const updateField = type === 'avatar' ? 'avatar_url' : 'cover_photo_url';
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ [updateField]: publicUrl })
         .eq('id', user?.id);
-
       if (updateError) throw updateError;
-
       setProfile((prev: any) => ({ ...prev, [updateField]: publicUrl }));
-
-      toast({ title: "Upload successful!", description: `Your ${type} has been updated` });
+      toast({ title: 'Upload successful!', description: `Your ${type} has been updated` });
     } catch (error: any) {
-      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+      toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -184,18 +360,13 @@ export default function Profile() {
   const updateProfile = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(formData)
-        .eq('id', user?.id);
-
+      const { error } = await supabase.from('profiles').update(formData).eq('id', user?.id);
       if (error) throw error;
-
-      toast({ title: "Profile updated!", description: "Your changes have been saved" });
+      toast({ title: 'Profile updated!', description: 'Your changes have been saved' });
       setEditing(false);
       fetchProfile();
     } catch (error: any) {
-      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      toast({ title: 'Update failed', description: error.message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -203,14 +374,14 @@ export default function Profile() {
 
   return (
     <MainLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Cover Photo */}
+      <div className="max-w-3xl mx-auto space-y-6">
+        {/* Header card */}
         <Card className="overflow-hidden">
-          <div className="relative h-48 bg-gradient-primary group">
+          <div className="relative h-56 bg-gradient-primary group">
             {profile?.cover_photo_url ? (
-              <img src={profile.cover_photo_url} alt="Cover" className="w-full h-full object-cover object-center" />
+              <img src={profile.cover_photo_url} alt="Cover" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full bg-gradient-to-r from-primary/20 to-primary/10" />
+              <div className="w-full h-full bg-gradient-to-br from-primary/30 via-primary/10 to-background" />
             )}
             {isOwnProfile && (
               <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
@@ -223,10 +394,10 @@ export default function Profile() {
             )}
           </div>
 
-          <CardContent className="relative -mt-16 pb-6">
-            <div className="flex items-end justify-between">
-              <div className="relative group">
-                <Avatar className="h-32 w-32 border-4 border-background">
+          <CardContent className="relative -mt-20 pb-6">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+              <div className="relative group w-fit">
+                <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
                   <AvatarImage src={profile?.avatar_url} />
                   <AvatarFallback className="text-3xl">
                     {profile?.display_name?.[0]?.toUpperCase() || 'U'}
@@ -240,50 +411,61 @@ export default function Profile() {
                 )}
               </div>
 
-              {isOwnProfile ? (
-                !editing ? (
-                  <Button onClick={() => setEditing(true)}>Edit Profile</Button>
+              <div className="flex gap-2 sm:self-end">
+                {isOwnProfile ? (
+                  !editing ? (
+                    <Button onClick={() => setEditing(true)}>Edit Profile</Button>
+                  ) : (
+                    <>
+                      <Button variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
+                      <Button onClick={updateProfile} disabled={loading}>Save Changes</Button>
+                    </>
+                  )
                 ) : (
-                  <div className="space-x-2">
-                    <Button variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
-                    <Button onClick={updateProfile} disabled={loading}>Save Changes</Button>
-                  </div>
-                )
-              ) : (
-                <Button
-                  variant={isFollowing ? 'outline' : 'default'}
-                  onClick={toggleFollow}
-                >
-                  {isFollowing ? 'Unfollow' : 'Follow'}
-                </Button>
-              )}
+                  <Button variant={isFollowing ? 'outline' : 'default'} onClick={toggleFollow}>
+                    {isFollowing ? 'Unfollow' : 'Follow'}
+                  </Button>
+                )}
+              </div>
             </div>
 
-            <div className="mt-4 space-y-4">
+            <div className="mt-4 space-y-3">
               {!editing ? (
                 <>
-                  <h1 className="text-3xl font-bold">{profile?.display_name || 'Unknown User'}</h1>
-                  <p className="text-muted-foreground">{profile?.bio || 'No bio yet'}</p>
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground mt-2">
-                    <span className="font-medium">{followerCount} followers</span>
-                    <span>•</span>
-                    <span className="font-medium">{followingCount} following</span>
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    {profile?.display_name || 'Unknown User'}
+                  </h1>
+                  <p className="text-muted-foreground whitespace-pre-wrap">
+                    {profile?.bio || (isOwnProfile ? 'Add a bio to tell people about yourself.' : 'No bio yet')}
+                  </p>
+                  <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm">
+                    <span><span className="font-semibold">{followerCount}</span> <span className="text-muted-foreground">followers</span></span>
+                    <span className="text-muted-foreground">•</span>
+                    <span><span className="font-semibold">{followingCount}</span> <span className="text-muted-foreground">following</span></span>
+                    <span className="text-muted-foreground">•</span>
+                    <span><span className="font-semibold">{postsCount}</span> <span className="text-muted-foreground">posts</span></span>
+                    <span className="text-muted-foreground">•</span>
+                    <span><span className="font-semibold">{userGroups.length}</span> <span className="text-muted-foreground">groups</span></span>
                   </div>
-                  
-                  <div className="flex items-center space-x-6 pt-4">
-                    <div className="flex items-center space-x-2">
-                      <Coins className="h-5 w-5 text-primary" />
-                      <span className="font-semibold">{profile?.token_balance || 0} Tokens</span>
-                    </div>
-                    {profile?.wallet_address && (
-                      <div className="flex items-center space-x-2">
-                        <Wallet className="h-5 w-5 text-primary" />
-                        <span className="text-sm font-mono">
-                          {profile.wallet_address.slice(0, 6)}...{profile.wallet_address.slice(-4)}
-                        </span>
+
+                  {/* Private to owner: tokens & wallet */}
+                  {isOwnProfile && (
+                    <div className="flex items-center flex-wrap gap-3 pt-3">
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                        <Coins className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-semibold">{profile?.token_balance || 0} TLC</span>
                       </div>
-                    )}
-                  </div>
+                      {profile?.wallet_address && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border">
+                          <Wallet className="h-4 w-4 text-primary" />
+                          <span className="text-xs font-mono">
+                            {profile.wallet_address.slice(0, 6)}…{profile.wallet_address.slice(-4)}
+                          </span>
+                        </div>
+                      )}
+                      <span className="text-xs text-muted-foreground">Only you can see this</span>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="space-y-4">
@@ -296,7 +478,7 @@ export default function Profile() {
                     <Textarea id="bio" value={formData.bio} onChange={(e) => setFormData({ ...formData, bio: e.target.value })} className="min-h-[100px]" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="wallet_address">Wallet Address</Label>
+                    <Label htmlFor="wallet_address">Wallet Address (private)</Label>
                     <Input id="wallet_address" value={formData.wallet_address} onChange={(e) => setFormData({ ...formData, wallet_address: e.target.value })} placeholder="0x..." />
                   </div>
                 </div>
@@ -305,96 +487,181 @@ export default function Profile() {
           </CardContent>
         </Card>
 
-        {/* User Stats */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader><h3 className="font-semibold">Posts</h3></CardHeader>
-            <CardContent><p className="text-3xl font-bold">{userPosts.length}</p></CardContent>
-          </Card>
-          <Card>
-            <CardHeader><h3 className="font-semibold">Groups</h3></CardHeader>
-            <CardContent><p className="text-3xl font-bold">{userGroups.length}</p></CardContent>
-          </Card>
+        {/* Activity */}
+        <div>
+          <h2 className="text-xl font-semibold mb-3">Recent Activity</h2>
+
+          {activity.length === 0 ? (
+            <Card className="p-12 text-center">
+              <p className="text-muted-foreground">No posts or reposts yet.</p>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {activity.map((item) => {
+                const post = item.post;
+                const isOwnPost = post.user_id === user?.id;
+                const isLiked = likedPosts.has(post.id);
+                const isReposted = repostedPosts.has(post.id);
+                const imgs =
+                  post.image_urls && post.image_urls.length > 0
+                    ? post.image_urls
+                    : post.image_url
+                    ? [post.image_url]
+                    : [];
+
+                return (
+                  <Card key={`${item.kind}-${item.kind === 'repost' ? item.repostId : post.id}`} className="p-6">
+                    {item.kind === 'repost' && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                        <Repeat2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <span>
+                          {isOwnProfile ? 'You' : item.reposterName || 'User'} reposted
+                          {' • '}
+                          {formatDistanceToNow(new Date(item.repostedAt!), { addSuffix: true })}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-start gap-3 flex-1">
+                        <Avatar
+                          className="cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => navigate(`/profile/${post.user_id}`)}
+                        >
+                          <AvatarImage src={post.profiles?.avatar_url} />
+                          <AvatarFallback>
+                            {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-1">
+                          <p
+                            className="font-semibold cursor-pointer hover:text-primary transition-colors"
+                            onClick={() => navigate(`/profile/${post.user_id}`)}
+                          >
+                            {post.profiles?.display_name || 'Unknown'}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                            <span>{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
+                            {post.privacy && <PostPrivacyBadge privacy={post.privacy} />}
+                          </div>
+                        </div>
+                      </div>
+
+                      {isOwnPost && item.kind === 'post' && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEdit(post)}>
+                              <Pencil className="h-4 w-4 mr-2" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => deletePost(post.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+
+                    <p
+                      className="mb-4 whitespace-pre-wrap cursor-pointer"
+                      onClick={() => navigate(`/posts/${post.id}`)}
+                    >
+                      {post.content}
+                    </p>
+
+                    {imgs.length > 0 && (
+                      <div className="mb-4">
+                        <PostImageCarousel
+                          images={imgs}
+                          alt="Post image"
+                          onImageClick={() => navigate(`/posts/${post.id}`)}
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center space-x-4 pt-4 border-t">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleLike(post.id, post.user_id)}
+                        className={isLiked ? 'text-red-500' : ''}
+                      >
+                        <Heart className={`mr-2 h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+                        {post.likes_count || 0}
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/posts/${post.id}`)}>
+                        <MessageCircle className="mr-2 h-4 w-4" />
+                        {post.comments_count || 0}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleRepost(post.id)}
+                        className={isReposted ? 'text-green-500' : ''}
+                      >
+                        <Repeat2 className={`mr-2 h-4 w-4 ${isReposted ? 'fill-current' : ''}`} />
+                        {post.reposts_count || 0}
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
-
-        {/* User Posts & Reposts */}
-        {(userPosts.length > 0 || userReposts.length > 0) && (
-          <Card>
-            <CardHeader>
-              <h3 className="text-xl font-semibold">Recent Activity</h3>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {userPosts.map((post) => (
-                <div
-                  key={`post-${post.id}`}
-                  className="border-b last:border-0 pb-6 last:pb-0 cursor-pointer hover:bg-accent/30 rounded-lg p-3 transition-colors"
-                  onClick={() => navigate(`/posts/${post.id}`)}
-                >
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Posted {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-                  </p>
-                  <p className="mb-3">{post.content}</p>
-                  
-                  {(() => {
-                    const imgs = post.image_urls && post.image_urls.length > 0
-                      ? post.image_urls
-                      : post.image_url ? [post.image_url] : [];
-                    if (imgs.length === 0) return null;
-                    return (
-                      <div className="mb-3">
-                        <PostImageCarousel images={imgs} alt="Post image" maxHeightClass="max-h-[400px]" />
-                      </div>
-                    );
-                  })()}
-
-                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                    <span className="flex items-center"><Heart className="h-4 w-4 mr-1" />{post.likes_count || 0}</span>
-                    <span className="flex items-center"><MessageCircle className="h-4 w-4 mr-1" />{post.comments_count || 0}</span>
-                  </div>
-                </div>
-              ))}
-
-              {userReposts.map((repost: any) => (
-                <div
-                  key={`repost-${repost.id}`}
-                  className="border-b last:border-0 pb-6 last:pb-0 bg-accent/30 p-4 rounded-lg cursor-pointer hover:bg-accent/50 transition-colors"
-                  onClick={() => navigate(`/posts/${repost.posts?.id}`)}
-                >
-                  <p className="text-sm text-green-600 dark:text-green-400 mb-2 flex items-center">
-                    <Repeat2 className="h-4 w-4 mr-1" />
-                    Reposted {formatDistanceToNow(new Date(repost.created_at), { addSuffix: true })}
-                  </p>
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={repost.posts?.profiles?.avatar_url} />
-                      <AvatarFallback>{repost.posts?.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-                    </Avatar>
-                    <p className="text-sm font-semibold">{repost.posts?.profiles?.display_name}</p>
-                  </div>
-                  <p className="mb-3">{repost.posts?.content}</p>
-
-                  {(() => {
-                    const imgs = repost.posts?.image_urls && repost.posts.image_urls.length > 0
-                      ? repost.posts.image_urls
-                      : repost.posts?.image_url ? [repost.posts.image_url] : [];
-                    if (imgs.length === 0) return null;
-                    return (
-                      <div className="mb-3">
-                        <PostImageCarousel images={imgs} alt="Repost image" maxHeightClass="max-h-[400px]" />
-                      </div>
-                    );
-                  })()}
-
-                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                    <span className="flex items-center"><Heart className="h-4 w-4 mr-1" />{repost.posts?.likes_count || 0}</span>
-                    <span className="flex items-center"><MessageCircle className="h-4 w-4 mr-1" />{repost.posts?.comments_count || 0}</span>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editingPost} onOpenChange={(open) => !open && setEditingPost(null)}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Post</DialogTitle>
+            <DialogDescription>Update your post content and privacy</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-profile-content">Content</Label>
+              <Textarea
+                id="edit-profile-content"
+                className="min-h-[150px]"
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Privacy</Label>
+              <Select value={editPrivacy} onValueChange={(v) => setEditPrivacy(v as PostPrivacy)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="public">
+                    <span className="flex items-center"><Globe className="mr-2 h-4 w-4" />Public</span>
+                  </SelectItem>
+                  <SelectItem value="friends">
+                    <span className="flex items-center"><UsersIcon className="mr-2 h-4 w-4" />Followers</span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingPost(null)} disabled={editSaving}>
+              Cancel
+            </Button>
+            <Button onClick={saveEdit} disabled={editSaving}>
+              {editSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
