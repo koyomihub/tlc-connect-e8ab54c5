@@ -486,7 +486,15 @@ export default function Profile() {
                     <div className="flex items-center flex-wrap gap-3 pt-3">
                       <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
                         <Coins className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-semibold">{profile?.token_balance || 0} TLC</span>
+                        <span className="text-sm font-semibold">
+                          {account
+                            ? tlcLoading
+                              ? 'Syncing…'
+                              : onChainTLC !== null
+                                ? `${parseFloat(onChainTLC).toLocaleString(undefined, { maximumFractionDigits: 2 })} $TLC`
+                                : '— $TLC'
+                            : `${profile?.token_balance || 0} TLC (off-chain)`}
+                        </span>
                       </div>
                       {profile?.wallet_address && (
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border">
