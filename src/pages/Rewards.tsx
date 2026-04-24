@@ -81,6 +81,15 @@ export default function Rewards() {
     setNftItems(data || []);
   };
 
+  const fetchOwnedNFTs = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('user_nfts')
+      .select('nft_item_id')
+      .eq('user_id', user.id);
+    setOwnedItemIds(new Set((data || []).map((r: any) => r.nft_item_id)));
+  };
+
   const fetchUserBalance = async () => {
     if (!user) return;
 
