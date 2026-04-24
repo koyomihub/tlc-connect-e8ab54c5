@@ -129,6 +129,7 @@ export default function Feed() {
     if (!user) return;
 
     fetchPosts();
+    fetchReposts();
     fetchLikedPosts();
     fetchRepostedPosts();
     fetchUserProfile();
