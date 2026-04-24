@@ -642,7 +642,6 @@ export default function Feed() {
                       <PostImageCarousel
                         images={imgs}
                         alt="Post image"
-                        onImageClick={() => navigate(`/posts/${post.id}`)}
                       />
                     </div>
                   );
