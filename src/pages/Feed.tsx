@@ -203,6 +203,42 @@ export default function Feed() {
     setPosts(data as any || []);
   };
 
+  const fetchReposts = async () => {
+    if (!user) return;
+
+    // RLS handles privacy filtering: own + public + friends-from-followed
+    const { data, error } = await supabase
+      .from('reposts')
+      .select(`
+        id, created_at, user_id, privacy,
+        reposter:profiles!reposts_user_id_fkey (display_name, avatar_url),
+        post:posts!reposts_post_id_fkey (
+          *,
+          profiles!posts_user_id_fkey (display_name, avatar_url)
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) {
+      console.error('Error fetching reposts:', error);
+      return;
+    }
+
+    const items: RepostItem[] = (data || [])
+      .filter((r: any) => r.post && !r.post.is_hidden)
+      .map((r: any) => ({
+        id: r.id,
+        created_at: r.created_at,
+        user_id: r.user_id,
+        privacy: r.privacy,
+        reposter: r.reposter,
+        post: r.post,
+      }));
+
+    setReposts(items);
+  };
+
   const fetchLikedPosts = async () => {
     if (!user) return;
     const { data } = await supabase
