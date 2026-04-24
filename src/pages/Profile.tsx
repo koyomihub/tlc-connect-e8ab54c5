@@ -539,7 +539,16 @@ export default function Profile() {
           <CardContent className="relative -mt-20 pb-6">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
               <div className="relative w-fit">
-                <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
+                <Avatar
+                  className={`h-32 w-32 border-4 border-background shadow-lg ${
+                    !(isOwnProfile && editing) && profile?.avatar_url ? 'cursor-zoom-in' : ''
+                  }`}
+                  onClick={() => {
+                    if (!(isOwnProfile && editing) && profile?.avatar_url) {
+                      setViewerImage({ url: profile.avatar_url, alt: profile.display_name || 'Profile photo' });
+                    }
+                  }}
+                >
                   <AvatarImage src={profile?.avatar_url} />
                   <AvatarFallback className="text-3xl">
                     {profile?.display_name?.[0]?.toUpperCase() || 'U'}
