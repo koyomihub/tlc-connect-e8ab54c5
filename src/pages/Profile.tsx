@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -83,8 +83,16 @@ export default function Profile() {
   const [formData, setFormData] = useState({
     display_name: '',
     bio: '',
-    wallet_address: '',
   });
+
+  // Cover photo repositioning
+  const [repositioning, setRepositioning] = useState(false);
+  const [coverPosition, setCoverPosition] = useState<string>('center');
+  const [draftPosition, setDraftPosition] = useState<string>('center');
+  const coverRef = useRef<HTMLDivElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const draggingRef = useRef(false);
 
   // Edit/delete state for own posts
   const [editingPost, setEditingPost] = useState<any | null>(null);
@@ -141,14 +149,57 @@ export default function Profile() {
     const { data } = await supabase.from('profiles').select('*').eq('id', profileId).single();
     if (data) {
       setProfile(data);
+      const pos = (data as any).cover_position || 'center';
+      setCoverPosition(pos);
+      setDraftPosition(pos);
       if (isOwnProfile) {
         setFormData({
           display_name: data.display_name || '',
           bio: data.bio || '',
-          wallet_address: data.wallet_address || '',
         });
       }
     }
+  };
+
+  // Cover photo reposition (drag vertically to set object-position)
+  const handleCoverPointerDown = (e: React.PointerEvent) => {
+    if (!repositioning) return;
+    draggingRef.current = true;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    updateDraftFromPointer(e);
+  };
+  const handleCoverPointerMove = (e: React.PointerEvent) => {
+    if (!repositioning || !draggingRef.current) return;
+    updateDraftFromPointer(e);
+  };
+  const handleCoverPointerUp = () => { draggingRef.current = false; };
+
+  const updateDraftFromPointer = (e: React.PointerEvent) => {
+    const el = coverRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+    const pct = Math.round((y / rect.height) * 100);
+    setDraftPosition(`center ${pct}%`);
+  };
+
+  const saveCoverPosition = async () => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ cover_position: draftPosition } as any)
+      .eq('id', user?.id);
+    if (error) {
+      toast({ title: 'Could not save position', description: error.message, variant: 'destructive' });
+    } else {
+      setCoverPosition(draftPosition);
+      setRepositioning(false);
+      toast({ title: 'Cover position saved' });
+    }
+  };
+
+  const cancelReposition = () => {
+    setDraftPosition(coverPosition);
+    setRepositioning(false);
   };
 
   const fetchFollowCounts = async () => {
