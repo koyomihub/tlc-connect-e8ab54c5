@@ -137,7 +137,8 @@ serve(async (req) => {
     let mintHash: string | null = null;
     try {
       const uri = nftItem.metadata_uri || nftItem.image_url || "";
-      const mintTx = await nft.mintTo(userWallet, TOKEN_ID, uri, 1n);
+      // Use sentinel so thirdweb mints a new tokenId for each purchase.
+      const mintTx = await nft.mintTo(userWallet, NEW_TOKEN_SENTINEL, uri, 1n);
       const mintReceipt = await mintTx.wait();
       if (mintReceipt?.status !== 1) throw new Error('Mint receipt failed');
       mintHash = mintTx.hash;
