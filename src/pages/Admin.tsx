@@ -92,18 +92,6 @@ export default function Admin() {
     setPosts(data || []);
   };
 
-  const fetchThreads = async () => {
-    const { data } = await supabase
-      .from('threads')
-      .select(`
-        *,
-        profiles!threads_user_id_fkey(display_name)
-      `)
-      .order('created_at', { ascending: false });
-
-    setThreads(data || []);
-  };
-
   const fetchGroups = async () => {
     const { data } = await supabase
       .from('groups')
