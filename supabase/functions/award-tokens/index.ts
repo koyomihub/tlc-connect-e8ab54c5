@@ -11,17 +11,16 @@ const DAILY_TOKEN_LIMIT = 100;
 const ALLOWED_TYPES: Record<string, number> = {
   daily_login: 10,
   post_created: 5,
-  thread_created: 5,
   comment_created: 3,
   group_joined: 5,
   post_like_received: 2,
   comment_received: 2,
 };
 
-const POST_DEDUP_TYPES = ['post_like_received', 'comment_received', 'post_created', 'thread_created', 'comment_created'];
+const POST_DEDUP_TYPES = ['post_like_received', 'comment_received', 'post_created', 'comment_created'];
 const RECEIVED_TYPES = ['post_like_received', 'comment_received'];
 const DAILY_DEDUP_TYPES = ['daily_login'];
-const REQUIRES_POST_ID = ['post_created', 'thread_created', 'comment_created', 'post_like_received', 'comment_received'];
+const REQUIRES_POST_ID = ['post_created', 'comment_created', 'post_like_received', 'comment_received'];
 
 // Limit: max 3 post_created rewards per day
 const DAILY_COUNT_LIMITS: Record<string, number> = {
