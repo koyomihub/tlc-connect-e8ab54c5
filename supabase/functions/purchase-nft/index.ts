@@ -248,7 +248,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      burnTx: burnTx.hash,
+      burnTx: burnHash,
       mintTx: mintHash,
       nftName: nftItem.name,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
