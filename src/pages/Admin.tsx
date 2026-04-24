@@ -212,24 +212,6 @@ export default function Admin() {
     }
   };
 
-  const deleteThread = async (threadId: string) => {
-    const { error } = await supabase
-      .from('threads')
-      .delete()
-      .eq('id', threadId);
-
-    if (error) {
-      toast({
-        title: 'Error deleting thread',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({ title: 'Thread deleted' });
-      fetchThreads();
-    }
-  };
-
   const deleteGroup = async (groupId: string) => {
     const { error } = await supabase
       .from('groups')
