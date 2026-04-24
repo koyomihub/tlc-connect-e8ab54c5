@@ -28,7 +28,12 @@ interface NFTItem {
 }
 
 const TLC_CONTRACT = '0xf95368bF95bAB7E83447E249B6C7e53B3bb858b0';
-const ERC20_BALANCE_ABI = ['function balanceOf(address) view returns (uint256)'];
+const AMOY_CHAIN_ID = '0x13882'; // 80002
+const ERC20_ABI = [
+  'function balanceOf(address) view returns (uint256)',
+  'function allowance(address owner, address spender) view returns (uint256)',
+  'function approve(address spender, uint256 amount) returns (bool)',
+];
 
 export default function Rewards() {
   const { user } = useAuth();
