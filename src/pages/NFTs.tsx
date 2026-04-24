@@ -428,12 +428,12 @@ export default function NFTs() {
                   </div>
                   <div className="flex justify-between">
                     <span>Your Balance:</span>
-                    <span className="font-bold">{userBalance.toLocaleString()}</span>
+                    <span className="font-bold">{onChainBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} $TLC</span>
                   </div>
                   <div className="flex justify-between border-t pt-2">
                     <span>Balance After:</span>
                     <span className="font-bold">
-                      {(userBalance - selectedItem.price).toLocaleString()}
+                      {(onChainBalance - selectedItem.price).toLocaleString(undefined, { maximumFractionDigits: 2 })} $TLC
                     </span>
                   </div>
                 </div>
