@@ -246,15 +246,28 @@ serve(async (req) => {
     let mintTx;
     try {
       if (mintMode === 'drop-claim' && claimCondition) {
-        mintTx = await nft.claim(
-          userWallet,
-          claimTokenId,
-          1n,
-          claimCondition.currency,
-          claimCondition.pricePerToken,
-          { proof: [], quantityLimitPerWallet: 0n, pricePerToken: claimCondition.pricePerToken, currency: claimCondition.currency },
-          '0x',
-        );
+        if (claimCondition.currency.toLowerCase() === NATIVE_POL_ADDRESS.toLowerCase() && claimCondition.pricePerToken > 0n) {
+          mintTx = await nft.claim(
+            userWallet,
+            claimTokenId,
+            1n,
+            claimCondition.currency,
+            claimCondition.pricePerToken,
+            { proof: [], quantityLimitPerWallet: 0n, pricePerToken: claimCondition.pricePerToken, currency: claimCondition.currency },
+            '0x',
+            { value: claimCondition.pricePerToken },
+          );
+        } else {
+          mintTx = await nft.claim(
+            userWallet,
+            claimTokenId,
+            1n,
+            claimCondition.currency,
+            claimCondition.pricePerToken,
+            { proof: [], quantityLimitPerWallet: 0n, pricePerToken: claimCondition.pricePerToken, currency: claimCondition.currency },
+            '0x',
+          );
+        }
       } else {
         mintTx = await nft.mintTo(userWallet, NEW_TOKEN_SENTINEL, uri, 1n);
       }
