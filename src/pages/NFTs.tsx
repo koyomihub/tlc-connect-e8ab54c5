@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 
 interface NFTItem {
   id: string;
@@ -164,9 +165,23 @@ export default function NFTs() {
       const priceWei = ethers.parseUnits(String(selectedItem.price), 18);
 
       // First call to learn the minter (spender) address from the edge function
-      const probe = await supabase.functions.invoke('purchase-nft', {
-        body: { nftItemId: selectedItem.id, userWallet: account },
-      });
+      const callMintFunction = async () => {
+        const result = await supabase.functions.invoke('purchase-nft', {
+          body: { nftItemId: selectedItem.id, userWallet: account },
+        });
+
+        if (result.error instanceof FunctionsHttpError) {
+          const ctx = result.error.context;
+          if (ctx instanceof Response) {
+            const errorBody = await ctx.json().catch(() => null);
+            return { data: errorBody, error: result.error };
+          }
+        }
+
+        return result;
+      };
+
+      const probe = await callMintFunction();
 
       const probeData: any = probe.data;
       const probeErrMsg: string | undefined = probe.error?.message;
@@ -180,10 +195,8 @@ export default function NFTs() {
         await approveTx.wait();
 
         // Retry mint
-        const retry = await supabase.functions.invoke('purchase-nft', {
-          body: { nftItemId: selectedItem.id, userWallet: account },
-        });
-        if (retry.error) throw new Error(retry.error.message);
+        const retry = await callMintFunction();
+        if (retry.error) throw new Error(retry.data?.error || retry.error.message);
         if (retry.data?.error) throw new Error(retry.data.error);
 
         toast({
