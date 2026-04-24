@@ -22,7 +22,7 @@ export default function Admin() {
   const [users, setUsers] = useState<any[]>([]);
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
-  const [threads, setThreads] = useState<any[]>([]);
+  
   const [groups, setGroups] = useState<any[]>([]);
   const [newOrg, setNewOrg] = useState({ name: '', description: '' });
   const [selectedUser, setSelectedUser] = useState<string>('');
@@ -54,7 +54,6 @@ export default function Admin() {
     fetchUsers();
     fetchOrganizations();
     fetchPosts();
-    fetchThreads();
     fetchGroups();
   };
 
@@ -90,18 +89,6 @@ export default function Admin() {
       .order('created_at', { ascending: false });
 
     setPosts(data || []);
-  };
-
-  const fetchThreads = async () => {
-    const { data } = await supabase
-      .from('threads')
-      .select(`
-        *,
-        profiles!threads_user_id_fkey(display_name)
-      `)
-      .order('created_at', { ascending: false });
-
-    setThreads(data || []);
   };
 
   const fetchGroups = async () => {
@@ -221,24 +208,6 @@ export default function Admin() {
     } else {
       toast({ title: 'Post deleted' });
       fetchPosts();
-    }
-  };
-
-  const deleteThread = async (threadId: string) => {
-    const { error } = await supabase
-      .from('threads')
-      .delete()
-      .eq('id', threadId);
-
-    if (error) {
-      toast({
-        title: 'Error deleting thread',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({ title: 'Thread deleted' });
-      fetchThreads();
     }
   };
 

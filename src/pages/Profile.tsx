@@ -27,7 +27,7 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [userPosts, setUserPosts] = useState<any[]>([]);
-  const [userThreads, setUserThreads] = useState<any[]>([]);
+  
   const [userGroups, setUserGroups] = useState<any[]>([]);
   const [userReposts, setUserReposts] = useState<any[]>([]);
   const [followerCount, setFollowerCount] = useState(0);
@@ -134,12 +134,6 @@ export default function Profile() {
       .order('created_at', { ascending: false })
       .limit(5);
     setUserReposts(reposts || []);
-
-    const { data: threads } = await supabase
-      .from('threads')
-      .select('*')
-      .eq('user_id', profileId);
-    setUserThreads(threads || []);
 
     const { data: memberGroups } = await supabase
       .from('group_members')

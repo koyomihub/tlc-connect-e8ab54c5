@@ -318,7 +318,7 @@ export default function Earn() {
             <p>• Each like from another user counts only once (no duplicates)</p>
             <p>• Unliking a post does not reduce your earned TLC points</p>
             <p>• Connect your wallet to claim your TLC points as $TLC tokens on the blockchain</p>
-            <p>• $TLC tokens can be used in the Rewards store to purchase NFTs</p>
+            <p>• $TLC tokens can be used in the NFTs page to mint exclusive NFTs</p>
           </CardContent>
         </Card>
       </div>

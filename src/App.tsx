@@ -11,7 +11,7 @@ import Auth from "./pages/Auth";
 import Feed from "./pages/Feed";
 import PostDetail from "./pages/PostDetail";
 import Earn from "./pages/Earn";
-import Rewards from "./pages/Rewards";
+import NFTs from "./pages/NFTs";
 import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
 import Organizations from "./pages/Organizations";
@@ -79,13 +79,15 @@ const App = () => (
                 }
               />
               <Route
-                path="/rewards"
+                path="/nfts"
                 element={
                   <ProtectedRoute>
-                    <Rewards />
+                    <NFTs />
                   </ProtectedRoute>
                 }
               />
+              {/* Legacy redirect */}
+              <Route path="/rewards" element={<Navigate to="/nfts" replace />} />
               <Route
                 path="/groups"
                 element={

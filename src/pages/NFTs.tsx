@@ -47,7 +47,7 @@ const ERC20_ABI = [
   'function approve(address spender, uint256 amount) returns (bool)',
 ];
 
-export default function Rewards() {
+export default function NFTs() {
   const { user } = useAuth();
   const { account, connectWallet } = useWallet();
   const [nftItems, setNftItems] = useState<NFTItem[]>([]);
