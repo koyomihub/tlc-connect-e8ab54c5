@@ -58,7 +58,7 @@ export default function Rewards() {
       try {
         const { ethers } = await import('ethers');
         const provider = new ethers.BrowserProvider(window.ethereum);
-        const contract = new ethers.Contract(TLC_CONTRACT, ERC20_BALANCE_ABI, provider);
+        const contract = new ethers.Contract(TLC_CONTRACT, ERC20_ABI, provider);
         const bal = await contract.balanceOf(account);
         setOnChainBalance(parseFloat(ethers.formatUnits(bal, 18)));
       } catch (e) {
