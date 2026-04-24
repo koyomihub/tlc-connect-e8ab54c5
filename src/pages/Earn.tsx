@@ -141,9 +141,9 @@ export default function Earn() {
     if (!user || dailyLoginClaimed) return;
     setClaimingLogin(true);
 
-    const success = await awardTokens(5, 'daily_login', 'Daily login bonus');
+    const success = await awardTokens(10, 'daily_login', 'Daily login bonus');
     if (success) {
-      toast({ title: '+5 TLC Points!', description: 'Daily login bonus claimed' });
+      toast({ title: '+10 TLC Points!', description: 'Daily login bonus claimed' });
       setDailyLoginClaimed(true);
     }
     setClaimingLogin(false);
