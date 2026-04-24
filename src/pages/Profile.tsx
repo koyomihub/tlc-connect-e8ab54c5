@@ -750,6 +750,7 @@ export default function Profile() {
                         <PostImageCarousel
                           images={imgs}
                           alt="Post image"
+                          onImageClick={() => navigate(`/posts/${post.id}`)}
                         />
                       </div>
                     )}
