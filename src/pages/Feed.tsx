@@ -49,6 +49,19 @@ interface Post {
   };
 }
 
+interface RepostItem {
+  id: string; // repost row id
+  created_at: string;
+  user_id: string; // reposter
+  privacy: PostPrivacy;
+  reposter: { display_name: string; avatar_url: string };
+  post: Post;
+}
+
+type FeedItem =
+  | { kind: 'post'; sortDate: string; post: Post }
+  | { kind: 'repost'; sortDate: string; post: Post; repost: RepostItem };
+
 export default function Feed() {
   const { user } = useAuth();
   const navigate = useNavigate();
