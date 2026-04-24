@@ -98,9 +98,12 @@ export default function Rewards() {
     if (!user) return;
     const { data } = await supabase
       .from('user_nfts')
-      .select('nft_item_id')
-      .eq('user_id', user.id);
-    setOwnedItemIds(new Set((data || []).map((r: any) => r.nft_item_id)));
+      .select('id, purchased_at, transaction_hash, nft_item_id, nft_items(name, description, image_url)')
+      .eq('user_id', user.id)
+      .order('purchased_at', { ascending: false });
+    const rows = (data || []) as any[];
+    setOwnedItemIds(new Set(rows.map((r) => r.nft_item_id)));
+    setOwnedNFTs(rows as OwnedNFT[]);
   };
 
   const fetchUserBalance = async () => {
