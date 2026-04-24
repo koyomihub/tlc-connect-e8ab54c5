@@ -680,10 +680,6 @@ export default function Feed() {
             );
           });
         })()}
-              </Button>
-            )}
-          </Card>
-        )}
       </div>
 
       {/* Edit dialog */}
