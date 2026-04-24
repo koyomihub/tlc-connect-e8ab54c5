@@ -9,8 +9,6 @@ const corsHeaders = {
 
 const AMOY_RPC = "https://rpc-amoy.polygon.technology";
 const BURN_ADDRESS = "0x000000000000000000000000000000000000dEaD";
-// thirdweb TokenERC1155: passing type(uint256).max signals "mint a NEW tokenId".
-const NEW_TOKEN_SENTINEL = (1n << 256n) - 1n;
 const TLC_DECIMALS = 18;
 
 const TLC_ABI = [
@@ -19,9 +17,10 @@ const TLC_ABI = [
   "function balanceOf(address) view returns (uint256)",
 ];
 
-// thirdweb ERC1155 mintTo signature
 const NFT_ABI = [
   "function mintTo(address to, uint256 tokenId, string uri, uint256 amount)",
+  "function nextTokenIdToMint() view returns (uint256)",
+  "function getClaimConditionById(uint256 tokenId, uint256 conditionId) view returns (tuple(uint256 startTimestamp,uint256 maxClaimableSupply,uint256 supplyClaimed,uint256 quantityLimitPerWallet,uint256 merkleRoot,uint256 pricePerToken,address currency,string metadata))",
 ];
 
 serve(async (req) => {
