@@ -9,6 +9,7 @@ const corsHeaders = {
 
 const AMOY_RPC = "https://rpc-amoy.polygon.technology";
 const BURN_ADDRESS = "0x000000000000000000000000000000000000dEaD";
+const NATIVE_POL_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
 const NEW_TOKEN_SENTINEL = (1n << 256n) - 1n;
 const TLC_DECIMALS = 18;
 
@@ -35,7 +36,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const minterPk = Deno.env.get('MINTER_PRIVATE_KEY')!;
     const tlcAddress = Deno.env.get('TLC_CONTRACT_ADDRESS')!;
-    const nftAddress = Deno.env.get('NFT_CONTRACT_ADDRESS')!;
+    const defaultNftAddress = Deno.env.get('NFT_CONTRACT_ADDRESS')!;
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -103,7 +104,8 @@ serve(async (req) => {
     const provider = new ethers.JsonRpcProvider(AMOY_RPC);
     const minter = new ethers.Wallet(minterPk, provider);
     const tlc = new ethers.Contract(tlcAddress, TLC_ABI, minter);
-    const nft = new ethers.Contract(nftAddress, NFT_ABI, minter);
+    const nftContractAddress = nftItem.contract_address || defaultNftAddress;
+    const nft = new ethers.Contract(nftContractAddress, NFT_ABI, minter);
 
     const priceWei = ethers.parseUnits(String(nftItem.price), TLC_DECIMALS);
     const userBal: bigint = await tlc.balanceOf(userWallet);
@@ -171,8 +173,22 @@ serve(async (req) => {
         }
 
         if (claimCondition.pricePerToken > 0n) {
+          const ownerPolBalance = await provider.getBalance(minter.address);
           return new Response(JSON.stringify({
-            error: 'This NFT collection is configured on-chain as a paid drop in native POL, so minting is blocked to prevent burning more $TLC. Set the drop price to 0 on the NFT contract or use a direct-mint NFT contract.',
+            error: 'This NFT collection is configured on-chain as a paid drop in native POL, so minting is blocked to prevent burning more $TLC.',
+            details: {
+              contractType: 'DropERC1155',
+              nftContractAddress,
+              tokenId: claimTokenId.toString(),
+              claimPriceWei: claimCondition.pricePerToken.toString(),
+              claimPricePol: ethers.formatEther(claimCondition.pricePerToken),
+              claimCurrency: claimCondition.currency,
+              ownerWallet: minter.address,
+              ownerPolBalance: ethers.formatEther(ownerPolBalance),
+              reason: claimCondition.currency.toLowerCase() === NATIVE_POL_ADDRESS.toLowerCase()
+                ? 'The contract requires native POL for claim().' 
+                : 'The contract requires a non-zero on-chain payment token for claim().',
+            },
           }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
