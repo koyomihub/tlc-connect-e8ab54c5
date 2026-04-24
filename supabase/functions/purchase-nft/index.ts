@@ -9,7 +9,8 @@ const corsHeaders = {
 
 const AMOY_RPC = "https://rpc-amoy.polygon.technology";
 const BURN_ADDRESS = "0x000000000000000000000000000000000000dEaD";
-const TOKEN_ID = 0n; // single tokenId for all mints
+// thirdweb TokenERC1155: passing type(uint256).max signals "mint a NEW tokenId".
+const NEW_TOKEN_SENTINEL = (1n << 256n) - 1n;
 const TLC_DECIMALS = 18;
 
 const TLC_ABI = [
