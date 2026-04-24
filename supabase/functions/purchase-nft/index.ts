@@ -19,8 +19,8 @@ const TLC_ABI = [
 
 const NFT_ABI = [
   "function mintTo(address to, uint256 tokenId, string uri, uint256 amount)",
-  "function nextTokenIdToMint() view returns (uint256)",
   "function getClaimConditionById(uint256 tokenId, uint256 conditionId) view returns (tuple(uint256 startTimestamp,uint256 maxClaimableSupply,uint256 supplyClaimed,uint256 quantityLimitPerWallet,uint256 merkleRoot,uint256 pricePerToken,address currency,string metadata))",
+  "function claim(address receiver,uint256 tokenId,uint256 quantity,address currency,uint256 pricePerToken,(bytes32[] proof,uint256 quantityLimitPerWallet,uint256 pricePerToken,address currency) allowlistProof,bytes data) payable",
 ];
 
 serve(async (req) => {
