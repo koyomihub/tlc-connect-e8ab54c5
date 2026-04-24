@@ -58,8 +58,8 @@ export default function Index() {
             <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
               <Gift className="h-6 w-6 text-primary" />
             </div>
-            <h3 className="text-xl font-semibold">Token Rewards</h3>
-            <p className="text-muted-foreground">Earn test tokens for participation and engagement on the platform.</p>
+            <h3 className="text-xl font-semibold">NFTs</h3>
+            <p className="text-muted-foreground">Earn test tokens for participation and burn them to mint exclusive NFTs.</p>
           </Card>
 
           <Card className="p-6 space-y-4 hover:shadow-elegant transition-shadow">
