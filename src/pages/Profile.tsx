@@ -22,7 +22,9 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWallet } from '@/contexts/WalletContext';
 import { toast } from '@/hooks/use-toast';
+import { ethers } from 'ethers';
 import { formatDistanceToNow } from 'date-fns';
 import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
 import { PostPrivacyBadge } from '@/components/feed/PostPrivacyBadge';
@@ -58,6 +60,9 @@ export default function Profile() {
   const { user } = useAuth();
   const { userId } = useParams<{ userId?: string }>();
   const navigate = useNavigate();
+  const { account } = useWallet();
+  const [onChainTLC, setOnChainTLC] = useState<string | null>(null);
+  const [tlcLoading, setTlcLoading] = useState(false);
 
   const profileId = userId || user?.id;
   const isOwnProfile = !userId || userId === user?.id;
@@ -102,6 +107,34 @@ export default function Profile() {
       }
     }
   }, [profileId, user]);
+
+  // Fetch live on-chain $TLC balance whenever the wallet account changes (own profile only)
+  useEffect(() => {
+    const fetchOnChain = async () => {
+      if (!isOwnProfile || !account || !window.ethereum) {
+        setOnChainTLC(null);
+        return;
+      }
+      setTlcLoading(true);
+      try {
+        const TLC_CONTRACT = '0xf95368bF95bAB7E83447E249B6C7e53B3bb858b0';
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const contract = new ethers.Contract(
+          TLC_CONTRACT,
+          ['function balanceOf(address) view returns (uint256)'],
+          provider,
+        );
+        const bal = await contract.balanceOf(account);
+        setOnChainTLC(ethers.formatUnits(bal, 18));
+      } catch (e) {
+        console.error('Error fetching on-chain TLC:', e);
+        setOnChainTLC(null);
+      } finally {
+        setTlcLoading(false);
+      }
+    };
+    fetchOnChain();
+  }, [account, isOwnProfile]);
 
   const fetchProfile = async () => {
     if (!profileId) return;
@@ -453,7 +486,15 @@ export default function Profile() {
                     <div className="flex items-center flex-wrap gap-3 pt-3">
                       <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
                         <Coins className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-semibold">{profile?.token_balance || 0} TLC</span>
+                        <span className="text-sm font-semibold">
+                          {account
+                            ? tlcLoading
+                              ? 'Syncing…'
+                              : onChainTLC !== null
+                                ? `${parseFloat(onChainTLC).toLocaleString(undefined, { maximumFractionDigits: 2 })} $TLC`
+                                : '— $TLC'
+                            : `${profile?.token_balance || 0} TLC (off-chain)`}
+                        </span>
                       </div>
                       {profile?.wallet_address && (
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border">

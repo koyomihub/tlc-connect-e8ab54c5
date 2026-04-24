@@ -49,6 +49,19 @@ interface Post {
   };
 }
 
+interface RepostItem {
+  id: string; // repost row id
+  created_at: string;
+  user_id: string; // reposter
+  privacy: PostPrivacy;
+  reposter: { display_name: string; avatar_url: string };
+  post: Post;
+}
+
+type FeedItem =
+  | { kind: 'post'; sortDate: string; post: Post }
+  | { kind: 'repost'; sortDate: string; post: Post; repost: RepostItem };
+
 export default function Feed() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -63,6 +76,8 @@ export default function Feed() {
   const [userProfile, setUserProfile] = useState<{ avatar_url?: string; display_name?: string } | null>(null);
   const [postPrivacy, setPostPrivacy] = useState<PostPrivacy>('public');
   const [followingIds, setFollowingIds] = useState<string[]>([]);
+  const [reposts, setReposts] = useState<RepostItem[]>([]);
+  const [repostPrivacy, setRepostPrivacy] = useState<PostPrivacy>('friends');
 
   // Edit/delete state
   const [editingPost, setEditingPost] = useState<Post | null>(null);
@@ -114,6 +129,7 @@ export default function Feed() {
     if (!user) return;
 
     fetchPosts();
+    fetchReposts();
     fetchLikedPosts();
     fetchRepostedPosts();
     fetchUserProfile();
@@ -185,6 +201,42 @@ export default function Feed() {
     }
 
     setPosts(data as any || []);
+  };
+
+  const fetchReposts = async () => {
+    if (!user) return;
+
+    // RLS handles privacy filtering: own + public + friends-from-followed
+    const { data, error } = await supabase
+      .from('reposts')
+      .select(`
+        id, created_at, user_id, privacy,
+        reposter:profiles!reposts_user_id_fkey (display_name, avatar_url),
+        post:posts!reposts_post_id_fkey (
+          *,
+          profiles!posts_user_id_fkey (display_name, avatar_url)
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) {
+      console.error('Error fetching reposts:', error);
+      return;
+    }
+
+    const items: RepostItem[] = (data || [])
+      .filter((r: any) => r.post && !r.post.is_hidden)
+      .map((r: any) => ({
+        id: r.id,
+        created_at: r.created_at,
+        user_id: r.user_id,
+        privacy: r.privacy,
+        reposter: r.reposter,
+        post: r.post,
+      }));
+
+    setReposts(items);
   };
 
   const fetchLikedPosts = async () => {
@@ -363,11 +415,17 @@ export default function Feed() {
       } else {
         await supabase
           .from('reposts')
-          .insert({ post_id: postId, user_id: user.id });
+          .insert({ post_id: postId, user_id: user.id, privacy: repostPrivacy });
 
         setRepostedPosts(prev => new Set(prev).add(postId));
-        toast({ title: 'Post reposted!' });
+        toast({
+          title: 'Post reposted!',
+          description: repostPrivacy === 'friends'
+            ? 'Visible to your followers'
+            : 'Visible to everyone',
+        });
       }
+      fetchReposts();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -459,126 +517,169 @@ export default function Feed() {
           </div>
         </Card>
 
-        {posts.map((post) => {
-          const isLiked = likedPosts.has(post.id);
-          const isReposted = repostedPosts.has(post.id);
+        {/* Repost privacy preference */}
+        <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+          <span>Reposts visible to:</span>
+          <Select value={repostPrivacy} onValueChange={(v) => setRepostPrivacy(v as PostPrivacy)}>
+            <SelectTrigger className="w-[140px] h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="friends">
+                <span className="flex items-center"><UsersIcon className="mr-2 h-4 w-4" />Followers</span>
+              </SelectItem>
+              <SelectItem value="public">
+                <span className="flex items-center"><Globe className="mr-2 h-4 w-4" />Public</span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-          return (
-            <Card key={post.id} className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-start space-x-3 flex-1">
-                  <Avatar
-                    className="cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => navigate(`/profile/${post.user_id}`)}
+        {(() => {
+          // Merge posts and reposts, sorted by date
+          const feedItems: FeedItem[] = [
+            ...posts.map((p) => ({ kind: 'post' as const, sortDate: p.created_at, post: p })),
+            ...reposts.map((r) => ({ kind: 'repost' as const, sortDate: r.created_at, post: r.post, repost: r })),
+          ].sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
+
+          if (feedItems.length === 0) {
+            return (
+              <Card className="p-12 text-center space-y-2">
+                <p className="text-muted-foreground">
+                  {followingIds.length === 0
+                    ? 'No posts yet. Create a post or follow people to see more activity here.'
+                    : 'No visible posts yet.'}
+                </p>
+                {followingIds.length === 0 && (
+                  <Button variant="outline" onClick={() => navigate('/people')}>
+                    Discover People
+                  </Button>
+                )}
+              </Card>
+            );
+          }
+
+          return feedItems.map((item) => {
+            const post = item.post;
+            const isLiked = likedPosts.has(post.id);
+            const isReposted = repostedPosts.has(post.id);
+            const itemKey = item.kind === 'repost' ? `repost-${item.repost.id}` : `post-${post.id}`;
+
+            return (
+              <Card key={itemKey} className="p-6">
+                {item.kind === 'repost' && (
+                  <div
+                    className="flex items-center gap-2 text-sm text-muted-foreground mb-3 cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => navigate(`/profile/${item.repost.user_id}`)}
                   >
-                    <AvatarImage src={post.profiles?.avatar_url} />
-                    <AvatarFallback>
-                      {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="space-y-1">
-                    <p
-                      className="font-semibold cursor-pointer hover:text-primary transition-colors"
+                    <Repeat2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <span>
+                      {item.repost.user_id === user?.id ? 'You' : item.repost.reposter?.display_name || 'Someone'} reposted
+                      {' • '}
+                      {formatDistanceToNow(new Date(item.repost.created_at), { addSuffix: true })}
+                    </span>
+                    <PostPrivacyBadge privacy={item.repost.privacy} />
+                  </div>
+                )}
+
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start space-x-3 flex-1">
+                    <Avatar
+                      className="cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={() => navigate(`/profile/${post.user_id}`)}
                     >
-                      {post.profiles?.display_name}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                      <span>
-                        {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-                      </span>
-                      <PostPrivacyBadge privacy={post.privacy} />
+                      <AvatarImage src={post.profiles?.avatar_url} />
+                      <AvatarFallback>
+                        {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-1">
+                      <p
+                        className="font-semibold cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => navigate(`/profile/${post.user_id}`)}
+                      >
+                        {post.profiles?.display_name}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                        <span>{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
+                        <PostPrivacyBadge privacy={post.privacy} />
+                      </div>
                     </div>
                   </div>
+                  {post.user_id === user?.id && item.kind === 'post' && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEdit(post)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => deletePost(post.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
-                {post.user_id === user?.id && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openEdit(post)}>
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => deletePost(post.id)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
 
-              <p className="mb-4 whitespace-pre-wrap">{post.content}</p>
+                <p className="mb-4 whitespace-pre-wrap">{post.content}</p>
 
-              {(() => {
-                const imgs = post.image_urls && post.image_urls.length > 0
-                  ? post.image_urls
-                  : post.image_url ? [post.image_url] : [];
-                if (imgs.length === 0) return null;
-                return (
-                  <div className="mb-4">
-                    <PostImageCarousel
-                      images={imgs}
-                      alt="Post image"
-                      onImageClick={() => navigate(`/posts/${post.id}`)}
-                    />
-                  </div>
-                );
-              })()}
+                {(() => {
+                  const imgs = post.image_urls && post.image_urls.length > 0
+                    ? post.image_urls
+                    : post.image_url ? [post.image_url] : [];
+                  if (imgs.length === 0) return null;
+                  return (
+                    <div className="mb-4">
+                      <PostImageCarousel
+                        images={imgs}
+                        alt="Post image"
+                        onImageClick={() => navigate(`/posts/${post.id}`)}
+                      />
+                    </div>
+                  );
+                })()}
 
-              <div className="flex items-center space-x-4 pt-4 border-t">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleLike(post.id)}
-                  className={isLiked ? 'text-red-500' : ''}
-                >
-                  <Heart className={`mr-2 h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-                  {post.likes_count || 0}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate(`/posts/${post.id}`)}
-                >
-                  <MessageCircle className="mr-2 h-4 w-4" />
-                  {post.comments_count || 0}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleRepost(post.id)}
-                  className={isReposted ? 'text-green-500' : ''}
-                >
-                  <Repeat2 className={`mr-2 h-4 w-4 ${isReposted ? 'fill-current' : ''}`} />
-                  {post.reposts_count || 0}
-                </Button>
-              </div>
-            </Card>
-          );
-        })}
-
-        {posts.length === 0 && (
-          <Card className="p-12 text-center space-y-2">
-            <p className="text-muted-foreground">
-              {followingIds.length === 0
-                ? 'No posts yet. Create a post or follow people to see more activity here.'
-                : 'No visible posts yet.'}
-            </p>
-            {followingIds.length === 0 && (
-              <Button variant="outline" onClick={() => navigate('/people')}>
-                Discover People
-              </Button>
-            )}
-          </Card>
-        )}
+                <div className="flex items-center space-x-4 pt-4 border-t">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleLike(post.id)}
+                    className={isLiked ? 'text-red-500' : ''}
+                  >
+                    <Heart className={`mr-2 h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+                    {post.likes_count || 0}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(`/posts/${post.id}`)}
+                  >
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    {post.comments_count || 0}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleRepost(post.id)}
+                    className={isReposted ? 'text-green-500' : ''}
+                  >
+                    <Repeat2 className={`mr-2 h-4 w-4 ${isReposted ? 'fill-current' : ''}`} />
+                    {post.reposts_count || 0}
+                  </Button>
+                </div>
+              </Card>
+            );
+          });
+        })()}
       </div>
 
       {/* Edit dialog */}
