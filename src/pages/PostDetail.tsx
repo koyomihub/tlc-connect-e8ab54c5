@@ -50,7 +50,7 @@ export default function PostDetail() {
   const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
   
 
   const handleReply = (target: Comment) => {
