@@ -76,6 +76,8 @@ export default function Feed() {
   const [userProfile, setUserProfile] = useState<{ avatar_url?: string; display_name?: string } | null>(null);
   const [postPrivacy, setPostPrivacy] = useState<PostPrivacy>('public');
   const [followingIds, setFollowingIds] = useState<string[]>([]);
+  const [reposts, setReposts] = useState<RepostItem[]>([]);
+  const [repostPrivacy, setRepostPrivacy] = useState<PostPrivacy>('friends');
 
   // Edit/delete state
   const [editingPost, setEditingPost] = useState<Post | null>(null);
