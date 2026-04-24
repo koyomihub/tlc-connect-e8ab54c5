@@ -54,7 +54,6 @@ export default function Admin() {
     fetchUsers();
     fetchOrganizations();
     fetchPosts();
-    fetchThreads();
     fetchGroups();
   };
 
