@@ -300,6 +300,16 @@ export default function NFTs() {
           </Card>
         </div>
 
+        <Alert className="border-primary/30 bg-primary/5">
+          <Info className="h-4 w-4 text-primary" />
+          <AlertTitle>Heads up: Minting requires POL on the platform wallet</AlertTitle>
+          <AlertDescription className="text-muted-foreground">
+            Each NFT mint costs the platform's owner wallet ~<span className="font-semibold text-foreground">0.1 POL</span> (claim fee) plus gas.
+            Admins should keep at least <span className="font-semibold text-foreground">0.2 POL</span> in the minter wallet to ensure mints don't fail.
+            Users only spend $TLC — no POL needed from your wallet.
+          </AlertDescription>
+        </Alert>
+
         <Tabs defaultValue="available" className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="available">Available NFTs</TabsTrigger>
