@@ -27,11 +27,15 @@ interface NFTItem {
   total_supply: number;
 }
 
+const TLC_CONTRACT = '0xf95368bF95bAB7E83447E249B6C7e53B3bb858b0';
+const ERC20_BALANCE_ABI = ['function balanceOf(address) view returns (uint256)'];
+
 export default function Rewards() {
   const { user } = useAuth();
   const { account, connectWallet } = useWallet();
   const [nftItems, setNftItems] = useState<NFTItem[]>([]);
   const [userBalance, setUserBalance] = useState(0);
+  const [onChainBalance, setOnChainBalance] = useState<number>(0);
   const [selectedItem, setSelectedItem] = useState<NFTItem | null>(null);
   const [purchasing, setPurchasing] = useState(false);
 
@@ -39,6 +43,26 @@ export default function Rewards() {
     fetchNFTItems();
     fetchUserBalance();
   }, [user]);
+
+  useEffect(() => {
+    const fetchOnChain = async () => {
+      if (!account || !window.ethereum) {
+        setOnChainBalance(0);
+        return;
+      }
+      try {
+        const { ethers } = await import('ethers');
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const contract = new ethers.Contract(TLC_CONTRACT, ERC20_BALANCE_ABI, provider);
+        const bal = await contract.balanceOf(account);
+        setOnChainBalance(parseFloat(ethers.formatUnits(bal, 18)));
+      } catch (e) {
+        console.error('Error fetching on-chain $TLC balance:', e);
+        setOnChainBalance(0);
+      }
+    };
+    fetchOnChain();
+  }, [account]);
 
   const fetchNFTItems = async () => {
     const { data } = await supabase
@@ -110,10 +134,10 @@ export default function Rewards() {
           <div>
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center">
               <Sparkles className="h-8 w-8 mr-2 text-primary" />
-              NFT Rewards Store
+              NFT Minting Station
             </h1>
             <p className="text-muted-foreground mt-1">
-              Spend your tokens on exclusive NFT rewards
+              Use your test tokens to mint exclusive test NFTs
             </p>
           </div>
 
@@ -121,8 +145,11 @@ export default function Rewards() {
             <CardContent className="flex items-center space-x-3 p-4">
               <Coins className="h-6 w-6 text-success" />
               <div>
-                <div className="text-xs text-muted-foreground">Your Balance</div>
-                <div className="text-2xl font-bold">{userBalance.toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground">Token Balance</div>
+                <div className="text-2xl font-bold">
+                  {account ? onChainBalance.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '0'}
+                  <span className="text-sm font-normal text-muted-foreground ml-1">$TLC</span>
+                </div>
               </div>
               {!account && (
                 <Button onClick={connectWallet} size="sm" variant="outline">
