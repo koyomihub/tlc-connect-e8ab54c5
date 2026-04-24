@@ -831,6 +831,25 @@ export default function Profile() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Image viewer */}
+      <Dialog open={!!viewerImage} onOpenChange={(open) => !open && setViewerImage(null)}>
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl p-0 bg-background/95 backdrop-blur border-0 overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{viewerImage?.alt || 'Image preview'}</DialogTitle>
+            <DialogDescription>Full resolution image preview</DialogDescription>
+          </DialogHeader>
+          {viewerImage && (
+            <div className="flex items-center justify-center max-h-[90vh] overflow-auto">
+              <img
+                src={viewerImage.url}
+                alt={viewerImage.alt}
+                className="w-auto h-auto max-w-full max-h-[90vh] object-contain"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
