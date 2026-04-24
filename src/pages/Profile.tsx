@@ -22,7 +22,9 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWallet } from '@/contexts/WalletContext';
 import { toast } from '@/hooks/use-toast';
+import { ethers } from 'ethers';
 import { formatDistanceToNow } from 'date-fns';
 import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
 import { PostPrivacyBadge } from '@/components/feed/PostPrivacyBadge';
