@@ -172,35 +172,65 @@ serve(async (req) => {
           }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
+        const claimUsesNativePol = claimCondition.currency.toLowerCase() === NATIVE_POL_ADDRESS.toLowerCase();
+
         if (claimCondition.pricePerToken > 0n) {
+          if (!claimUsesNativePol) {
+            return new Response(JSON.stringify({
+              error: 'This NFT collection requires an unsupported on-chain payment token for claim().',
+              details: {
+                contractType: 'DropERC1155',
+                nftContractAddress,
+                tokenId: claimTokenId.toString(),
+                claimPriceWei: claimCondition.pricePerToken.toString(),
+                claimCurrency: claimCondition.currency,
+                ownerWallet: minter.address,
+                reason: 'Only native POL paid claims are supported by this mint flow.',
+              },
+            }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          }
+
           const ownerPolBalance = await provider.getBalance(minter.address);
-          return new Response(JSON.stringify({
-            error: 'This NFT collection is configured on-chain as a paid drop in native POL, so minting is blocked to prevent burning more $TLC.',
-            details: {
-              contractType: 'DropERC1155',
-              nftContractAddress,
-              tokenId: claimTokenId.toString(),
-              claimPriceWei: claimCondition.pricePerToken.toString(),
-              claimPricePol: ethers.formatEther(claimCondition.pricePerToken),
-              claimCurrency: claimCondition.currency,
-              ownerWallet: minter.address,
-              ownerPolBalance: ethers.formatEther(ownerPolBalance),
-              reason: claimCondition.currency.toLowerCase() === NATIVE_POL_ADDRESS.toLowerCase()
-                ? 'The contract requires native POL for claim().' 
-                : 'The contract requires a non-zero on-chain payment token for claim().',
-            },
-          }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          if (ownerPolBalance < claimCondition.pricePerToken) {
+            return new Response(JSON.stringify({
+              error: 'The owner wallet does not have enough POL to pay the on-chain claim price.',
+              details: {
+                contractType: 'DropERC1155',
+                nftContractAddress,
+                tokenId: claimTokenId.toString(),
+                claimPriceWei: claimCondition.pricePerToken.toString(),
+                claimPricePol: ethers.formatEther(claimCondition.pricePerToken),
+                claimCurrency: claimCondition.currency,
+                ownerWallet: minter.address,
+                ownerPolBalance: ethers.formatEther(ownerPolBalance),
+                reason: 'The contract requires native POL for claim(), and the owner wallet balance is too low.',
+              },
+            }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          }
         }
 
-        await nft.claim.estimateGas(
-          userWallet,
-          claimTokenId,
-          1n,
-          claimCondition.currency,
-          claimCondition.pricePerToken,
-          { proof: [], quantityLimitPerWallet: 0n, pricePerToken: claimCondition.pricePerToken, currency: claimCondition.currency },
-          '0x',
-        );
+        if (claimUsesNativePol && claimCondition.pricePerToken > 0n) {
+          await nft.claim.estimateGas(
+            userWallet,
+            claimTokenId,
+            1n,
+            claimCondition.currency,
+            claimCondition.pricePerToken,
+            { proof: [], quantityLimitPerWallet: 0n, pricePerToken: claimCondition.pricePerToken, currency: claimCondition.currency },
+            '0x',
+            { value: claimCondition.pricePerToken },
+          );
+        } else {
+          await nft.claim.estimateGas(
+            userWallet,
+            claimTokenId,
+            1n,
+            claimCondition.currency,
+            claimCondition.pricePerToken,
+            { proof: [], quantityLimitPerWallet: 0n, pricePerToken: claimCondition.pricePerToken, currency: claimCondition.currency },
+            '0x',
+          );
+        }
       } else {
         await nft.mintTo.estimateGas(userWallet, NEW_TOKEN_SENTINEL, uri, 1n);
       }
