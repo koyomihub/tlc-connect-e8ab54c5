@@ -91,15 +91,10 @@ serve(async (req) => {
     if (RECEIVED_TYPES.includes(type)) {
       const { data: post } = await supabase.from('posts').select('user_id').eq('id', postId).single();
       if (!post) {
-        const { data: thread } = await supabase.from('threads').select('user_id').eq('id', postId).single();
-        if (!thread) {
-          return new Response(JSON.stringify({ error: 'Content not found' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-        }
-        targetUserId = thread.user_id;
-      } else {
-        targetUserId = post.user_id;
+        return new Response(JSON.stringify({ error: 'Content not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
+      targetUserId = post.user_id;
       if (targetUserId === callerUserId) {
         return new Response(JSON.stringify({ success: true, awarded: 0, reason: 'self_interaction' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -107,10 +102,6 @@ serve(async (req) => {
     } else if (type === 'post_created') {
       const { data: post } = await supabase.from('posts').select('id').eq('id', postId).eq('user_id', callerUserId).single();
       if (!post) return new Response(JSON.stringify({ error: 'Post not found or does not belong to you' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    } else if (type === 'thread_created') {
-      const { data: thread } = await supabase.from('threads').select('id').eq('id', postId).eq('user_id', callerUserId).single();
-      if (!thread) return new Response(JSON.stringify({ error: 'Thread not found or does not belong to you' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (type === 'comment_created') {
       const { data: comment } = await supabase.from('post_comments').select('id').eq('id', postId).eq('user_id', callerUserId).single();
