@@ -461,37 +461,101 @@ export default function Profile() {
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header card */}
         <Card className="overflow-hidden">
-          <div className="relative h-56 bg-gradient-primary group">
-            {profile?.cover_photo_url ? (
-              <img src={profile.cover_photo_url} alt="Cover" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-primary/30 via-primary/10 to-background" />
+          <div className={`relative h-56 w-full overflow-hidden ${profile?.cover_photo_url ? 'bg-muted' : 'bg-gradient-primary'}`}>
+            {/* Drag layer (image only) — buttons are siblings so they don't trigger drag */}
+            <div
+              ref={coverRef}
+              onPointerDown={handleCoverPointerDown}
+              onPointerMove={handleCoverPointerMove}
+              onPointerUp={handleCoverPointerUp}
+              onPointerCancel={handleCoverPointerUp}
+              className={`absolute inset-0 ${repositioning ? 'cursor-grab active:cursor-grabbing select-none' : ''}`}
+            >
+              {profile?.cover_photo_url ? (
+                <img
+                  src={profile.cover_photo_url}
+                  alt="Cover"
+                  draggable={false}
+                  className="w-full h-full object-cover pointer-events-none"
+                  style={{ objectPosition: repositioning ? draftPosition : coverPosition }}
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-primary/30 via-primary/10 to-background" />
+              )}
+            </div>
+
+            {isOwnProfile && editing && !repositioning && (
+              <div className="absolute bottom-3 right-3 flex gap-2 z-10">
+                <button
+                  type="button"
+                  onClick={() => coverInputRef.current?.click()}
+                  disabled={loading}
+                  className="bg-background/90 backdrop-blur border border-border rounded-full px-3 py-1.5 text-xs font-medium shadow hover:bg-accent transition flex items-center gap-1.5"
+                  aria-label="Change cover photo"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                  {loading ? 'Uploading…' : 'Change Cover'}
+                </button>
+                {profile?.cover_photo_url && (
+                  <button
+                    type="button"
+                    onClick={() => setRepositioning(true)}
+                    className="bg-background/90 backdrop-blur border border-border rounded-full px-3 py-1.5 text-xs font-medium shadow hover:bg-accent transition"
+                  >
+                    Reposition
+                  </button>
+                )}
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e, 'cover')}
+                  className="hidden"
+                />
+              </div>
             )}
-            {isOwnProfile && (
-              <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                <div className="text-center text-white">
-                  <Camera className="h-8 w-8 mx-auto mb-2" />
-                  <p className="text-sm">Click to upload cover photo</p>
+
+            {isOwnProfile && editing && repositioning && (
+              <>
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur rounded-full px-3 py-1 text-xs shadow z-10 pointer-events-none">
+                  Drag the image to reposition
                 </div>
-                <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'cover')} className="hidden" />
-              </label>
+                <div className="absolute bottom-3 right-3 flex gap-2 z-10">
+                  <Button size="sm" variant="outline" onClick={cancelReposition}>Cancel</Button>
+                  <Button size="sm" onClick={saveCoverPosition}>Save Position</Button>
+                </div>
+              </>
             )}
           </div>
 
           <CardContent className="relative -mt-20 pb-6">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-              <div className="relative group w-fit">
+              <div className="relative w-fit">
                 <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
                   <AvatarImage src={profile?.avatar_url} />
                   <AvatarFallback className="text-3xl">
                     {profile?.display_name?.[0]?.toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
-                {isOwnProfile && (
-                  <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                    <Camera className="h-6 w-6 text-white" />
-                    <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'avatar')} className="hidden" />
-                  </label>
+                {isOwnProfile && editing && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={loading}
+                      aria-label="Change profile photo"
+                      className="absolute bottom-1 right-1 bg-background border border-border shadow rounded-full p-2 hover:bg-accent transition"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </button>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileUpload(e, 'avatar')}
+                      className="hidden"
+                    />
+                  </>
                 )}
               </div>
 
@@ -568,10 +632,6 @@ export default function Profile() {
                   <div className="space-y-2">
                     <Label htmlFor="bio">Bio</Label>
                     <Textarea id="bio" value={formData.bio} onChange={(e) => setFormData({ ...formData, bio: e.target.value })} className="min-h-[100px]" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="wallet_address">Wallet Address (private)</Label>
-                    <Input id="wallet_address" value={formData.wallet_address} onChange={(e) => setFormData({ ...formData, wallet_address: e.target.value })} placeholder="0x..." />
                   </div>
                 </div>
               )}
