@@ -196,7 +196,12 @@ export default function NFTs() {
 
         // Retry mint
         const retry = await callMintFunction();
-        if (retry.error) throw new Error(retry.data?.error || retry.error.message);
+        if (retry.error) {
+          const detailText = retry.data?.details?.claimPricePol
+            ? ` On-chain claim price: ${retry.data.details.claimPricePol} POL. Owner POL balance: ${retry.data.details.ownerPolBalance ?? '0'}.`
+            : '';
+          throw new Error((retry.data?.error || retry.error.message) + detailText);
+        }
         if (retry.data?.error) throw new Error(retry.data.error);
 
         toast({
@@ -204,7 +209,10 @@ export default function NFTs() {
           description: `${selectedItem.name} is now in your wallet.`,
         });
       } else if (probe.error || probeData?.error) {
-        throw new Error(probeData?.error || probeErrMsg || 'Mint failed');
+        const detailText = probeData?.details?.claimPricePol
+          ? ` On-chain claim price: ${probeData.details.claimPricePol} POL. Owner POL balance: ${probeData.details.ownerPolBalance ?? '0'}.`
+          : '';
+        throw new Error((probeData?.error || probeErrMsg || 'Mint failed') + detailText);
       } else {
         toast({
           title: "Mint successful! 🎉",
