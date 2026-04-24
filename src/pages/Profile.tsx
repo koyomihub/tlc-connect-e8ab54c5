@@ -477,7 +477,14 @@ export default function Profile() {
                   src={profile.cover_photo_url}
                   alt="Cover"
                   draggable={false}
-                  className="w-full h-full object-cover pointer-events-none"
+                  onClick={() => {
+                    if (!repositioning && !(isOwnProfile && editing)) {
+                      setViewerImage({ url: profile.cover_photo_url, alt: 'Cover photo' });
+                    }
+                  }}
+                  className={`w-full h-full object-cover ${
+                    repositioning || (isOwnProfile && editing) ? 'pointer-events-none' : 'cursor-zoom-in'
+                  }`}
                   style={{ objectPosition: repositioning ? draftPosition : coverPosition }}
                 />
               ) : (
