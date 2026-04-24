@@ -111,7 +111,7 @@ export default function Earn() {
   }, [user, fetchTokenStats, checkDailyLoginClaimed]);
 
   const awardTokens = async (amount: number, type: string, description: string, postId?: string) => {
-    if (!user) return false;
+    if (!user) return null;
 
     try {
       const body: any = { type, description };
@@ -121,19 +121,19 @@ export default function Earn() {
 
       if (error) {
         toast({ title: 'Error', description: error.message, variant: 'destructive' });
-        return false;
+        return null;
       }
 
       if (data?.error) {
         toast({ title: 'Cannot earn tokens', description: data.error, variant: 'destructive' });
-        return false;
+        return null;
       }
 
       await fetchTokenStats();
-      return true;
+      return data;
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
-      return false;
+      return null;
     }
   };
 
@@ -141,9 +141,14 @@ export default function Earn() {
     if (!user || dailyLoginClaimed) return;
     setClaimingLogin(true);
 
-    const success = await awardTokens(10, 'daily_login', 'Daily login bonus');
-    if (success) {
-      toast({ title: '+10 TLC Points!', description: 'Daily login bonus claimed' });
+    const result = await awardTokens(10, 'daily_login', 'Daily login bonus');
+    if (result) {
+      const awarded = result.awarded ?? 10;
+      if (result.duplicate) {
+        toast({ title: 'Already claimed', description: 'You already claimed your daily login bonus today' });
+      } else {
+        toast({ title: `+${awarded} TLC Points!`, description: 'Daily login bonus claimed' });
+      }
       setDailyLoginClaimed(true);
     }
     setClaimingLogin(false);
