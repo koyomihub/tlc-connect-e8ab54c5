@@ -173,8 +173,22 @@ serve(async (req) => {
         }
 
         if (claimCondition.pricePerToken > 0n) {
+          const ownerPolBalance = await provider.getBalance(minter.address);
           return new Response(JSON.stringify({
-            error: 'This NFT collection is configured on-chain as a paid drop in native POL, so minting is blocked to prevent burning more $TLC. Set the drop price to 0 on the NFT contract or use a direct-mint NFT contract.',
+            error: 'This NFT collection is configured on-chain as a paid drop in native POL, so minting is blocked to prevent burning more $TLC.',
+            details: {
+              contractType: 'DropERC1155',
+              nftContractAddress,
+              tokenId: claimTokenId.toString(),
+              claimPriceWei: claimCondition.pricePerToken.toString(),
+              claimPricePol: ethers.formatEther(claimCondition.pricePerToken),
+              claimCurrency: claimCondition.currency,
+              ownerWallet: minter.address,
+              ownerPolBalance: ethers.formatEther(ownerPolBalance),
+              reason: claimCondition.currency.toLowerCase() === NATIVE_POL_ADDRESS.toLowerCase()
+                ? 'The contract requires native POL for claim().' 
+                : 'The contract requires a non-zero on-chain payment token for claim().',
+            },
           }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
