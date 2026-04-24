@@ -415,11 +415,17 @@ export default function Feed() {
       } else {
         await supabase
           .from('reposts')
-          .insert({ post_id: postId, user_id: user.id });
+          .insert({ post_id: postId, user_id: user.id, privacy: repostPrivacy });
 
         setRepostedPosts(prev => new Set(prev).add(postId));
-        toast({ title: 'Post reposted!' });
+        toast({
+          title: 'Post reposted!',
+          description: repostPrivacy === 'friends'
+            ? 'Visible to your followers'
+            : 'Visible to everyone',
+        });
       }
+      fetchReposts();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
