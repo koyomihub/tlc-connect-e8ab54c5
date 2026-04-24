@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Heart, MessageCircle, ArrowLeft, Trash2, ChevronLeft, ChevronRight, Reply } from 'lucide-react';
+import { Heart, MessageCircle, ArrowLeft, Trash2, Reply } from 'lucide-react';
 import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
+import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
 
 interface Post {
   id: string;
@@ -314,56 +315,21 @@ export default function PostDetail() {
 
           <p className="mb-4 whitespace-pre-wrap">{post.content}</p>
 
-          {post.image_urls && post.image_urls.length > 0 ? (
-            <div className="relative mb-4 group">
-              <div className="rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
-                <img
-                  src={post.image_urls[currentImageIndex]}
-                  alt={`Post image ${currentImageIndex + 1}`}
-                  className="max-h-[600px] w-auto max-w-full object-contain"
+          {(() => {
+            const imgs = post.image_urls && post.image_urls.length > 0
+              ? post.image_urls
+              : post.image_url ? [post.image_url] : [];
+            if (imgs.length === 0) return null;
+            return (
+              <div className="mb-4">
+                <PostImageCarousel
+                  images={imgs}
+                  alt="Post image"
+                  maxHeightClass="max-h-[600px]"
                 />
               </div>
-              {post.image_urls.length > 1 && (
-                <>
-                  <button
-                    type="button"
-                    aria-label="Previous image"
-                    onClick={() => setCurrentImageIndex((i) => (i - 1 + post.image_urls!.length) % post.image_urls!.length)}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 backdrop-blur border border-border shadow-md flex items-center justify-center hover:bg-background transition-opacity opacity-0 group-hover:opacity-100 focus:opacity-100"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Next image"
-                    onClick={() => setCurrentImageIndex((i) => (i + 1) % post.image_urls!.length)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 backdrop-blur border border-border shadow-md flex items-center justify-center hover:bg-background transition-opacity opacity-0 group-hover:opacity-100 focus:opacity-100"
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-2 bg-black/50 px-4 py-2 rounded-full">
-                    {post.image_urls.map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentImageIndex(index)}
-                        className={`h-2 w-2 rounded-full transition-all ${
-                          index === currentImageIndex ? 'bg-white w-4' : 'bg-white/50'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          ) : post.image_url ? (
-            <div className="mb-4 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
-              <img
-                src={post.image_url}
-                alt="Post"
-                className="max-h-[600px] w-auto max-w-full object-contain"
-              />
-            </div>
-          ) : null}
+            );
+          })()}
 
           <div className="flex items-center space-x-4 pt-4 border-t">
             <Button
