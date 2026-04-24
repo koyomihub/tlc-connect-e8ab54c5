@@ -607,6 +607,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           cover_photo_url: string | null
+          cover_position: string
           created_at: string | null
           display_name: string | null
           id: string
@@ -618,6 +619,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           cover_photo_url?: string | null
+          cover_position?: string
           created_at?: string | null
           display_name?: string | null
           id: string
@@ -629,6 +631,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           cover_photo_url?: string | null
+          cover_position?: string
           created_at?: string | null
           display_name?: string | null
           id?: string
