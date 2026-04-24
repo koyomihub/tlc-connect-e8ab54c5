@@ -28,6 +28,17 @@ interface NFTItem {
   total_supply: number;
 }
 
+interface OwnedNFT {
+  id: string;
+  purchased_at: string | null;
+  transaction_hash: string | null;
+  nft_items: {
+    name: string;
+    description: string | null;
+    image_url: string;
+  } | null;
+}
+
 const TLC_CONTRACT = '0xf95368bF95bAB7E83447E249B6C7e53B3bb858b0';
 const AMOY_CHAIN_ID = '0x13882'; // 80002
 const ERC20_ABI = [
