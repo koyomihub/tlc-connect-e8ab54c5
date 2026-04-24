@@ -59,6 +59,36 @@ export default function NFTs() {
   const [purchasing, setPurchasing] = useState(false);
   const [ownedItemIds, setOwnedItemIds] = useState<Set<string>>(new Set());
   const [ownedNFTs, setOwnedNFTs] = useState<OwnedNFT[]>([]);
+  const [sharingId, setSharingId] = useState<string | null>(null);
+
+  const shareToFeed = async (nft: OwnedNFT) => {
+    if (!user || !nft.nft_items) return;
+    setSharingId(nft.id);
+    try {
+      const name = nft.nft_items.name;
+      const content = `Just minted "${name}" on TLC-Connect! 🎉✨\n\nAnother piece added to my on-chain collection — earned through the $TLC token economy. Who's next?`;
+      const { error } = await supabase.from('posts').insert({
+        user_id: user.id,
+        content,
+        image_url: nft.nft_items.image_url,
+        image_urls: [nft.nft_items.image_url],
+        privacy: 'public',
+      });
+      if (error) throw error;
+      toast({
+        title: 'Shared to Feed! 🚀',
+        description: 'Your NFT is now showing off in everyone\'s feed.',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Could not share',
+        description: err.message || 'Something went wrong',
+        variant: 'destructive',
+      });
+    } finally {
+      setSharingId(null);
+    }
+  };
 
   useEffect(() => {
     fetchNFTItems();
