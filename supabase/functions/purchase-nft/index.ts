@@ -99,7 +99,7 @@ serve(async (req) => {
       });
     }
 
-    // On-chain checks: balance + allowance
+    // On-chain checks: balance + allowance + NFT preflight
     const provider = new ethers.JsonRpcProvider(AMOY_RPC);
     const minter = new ethers.Wallet(minterPk, provider);
     const tlc = new ethers.Contract(tlcAddress, TLC_ABI, minter);
@@ -114,6 +114,7 @@ serve(async (req) => {
         currentWei: userBal.toString(),
       }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
+
     const allowance: bigint = await tlc.allowance(userWallet, minter.address);
     if (allowance < priceWei) {
       return new Response(JSON.stringify({
@@ -122,6 +123,71 @@ serve(async (req) => {
         amount: priceWei.toString(),
         message: 'Approval required',
       }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const claimTokenId = nftItem.token_id ? BigInt(nftItem.token_id) : 0n;
+    const uri = nftItem.metadata_uri || nftItem.image_url || "";
+
+    let mintMode: 'drop-claim' | 'direct-mint' = 'direct-mint';
+    let claimCondition:
+      | {
+          startTimestamp: bigint;
+          maxClaimableSupply: bigint;
+          supplyClaimed: bigint;
+          quantityLimitPerWallet: bigint;
+          merkleRoot: bigint;
+          pricePerToken: bigint;
+          currency: string;
+          metadata: string;
+        }
+      | null = null;
+
+    try {
+      claimCondition = await nft.getClaimConditionById(claimTokenId, 0n);
+      mintMode = 'drop-claim';
+    } catch {
+      mintMode = 'direct-mint';
+    }
+
+    try {
+      if (mintMode === 'drop-claim' && claimCondition) {
+        const now = BigInt(Math.floor(Date.now() / 1000));
+        if (claimCondition.startTimestamp > now) {
+          return new Response(JSON.stringify({
+            error: 'NFT claim is not active yet on-chain.',
+          }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        const remainingSupply = claimCondition.maxClaimableSupply - claimCondition.supplyClaimed;
+        if (remainingSupply < 1n) {
+          return new Response(JSON.stringify({
+            error: 'NFT is sold out on-chain.',
+          }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        if (claimCondition.pricePerToken > 0n) {
+          return new Response(JSON.stringify({
+            error: 'This NFT collection is configured on-chain as a paid drop in native POL, so minting is blocked to prevent burning more $TLC. Set the drop price to 0 on the NFT contract or use a direct-mint NFT contract.',
+          }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        await nft.claim.estimateGas(
+          userWallet,
+          claimTokenId,
+          1n,
+          claimCondition.currency,
+          claimCondition.pricePerToken,
+          { proof: [], quantityLimitPerWallet: 0n, pricePerToken: claimCondition.pricePerToken, currency: claimCondition.currency },
+          '0x',
+        );
+      } else {
+        await nft.mintTo.estimateGas(userWallet, NEW_TOKEN_SENTINEL, uri, 1n);
+      }
+    } catch (preflightErr) {
+      console.error('NFT preflight failed before burn:', preflightErr);
+      return new Response(JSON.stringify({
+        error: 'NFT contract mint is not ready. Minting was stopped before any $TLC was burned.',
+      }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // 1) Burn $TLC by transferFrom user -> dead address
@@ -136,9 +202,20 @@ serve(async (req) => {
     // 2) Mint NFT to user
     let mintHash: string | null = null;
     try {
-      const uri = nftItem.metadata_uri || nftItem.image_url || "";
-      // Use sentinel so thirdweb mints a new tokenId for each purchase.
-      const mintTx = await nft.mintTo(userWallet, NEW_TOKEN_SENTINEL, uri, 1n);
+      let mintTx;
+      if (mintMode === 'drop-claim' && claimCondition) {
+        mintTx = await nft.claim(
+          userWallet,
+          claimTokenId,
+          1n,
+          claimCondition.currency,
+          claimCondition.pricePerToken,
+          { proof: [], quantityLimitPerWallet: 0n, pricePerToken: claimCondition.pricePerToken, currency: claimCondition.currency },
+          '0x',
+        );
+      } else {
+        mintTx = await nft.mintTo(userWallet, NEW_TOKEN_SENTINEL, uri, 1n);
+      }
       const mintReceipt = await mintTx.wait();
       if (mintReceipt?.status !== 1) throw new Error('Mint receipt failed');
       mintHash = mintTx.hash;
