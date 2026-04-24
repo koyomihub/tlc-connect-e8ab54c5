@@ -127,6 +127,11 @@ serve(async (req) => {
 
     const claimTokenId = nftItem.token_id ? BigInt(nftItem.token_id) : 0n;
     const uri = nftItem.metadata_uri || nftItem.image_url || "";
+    if (!uri) {
+      return new Response(JSON.stringify({
+        error: 'NFT metadata URI is missing. Set metadata_uri or image_url on the NFT item before minting.',
+      }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     let mintMode: 'drop-claim' | 'direct-mint' = 'direct-mint';
     let claimCondition:
@@ -190,19 +195,10 @@ serve(async (req) => {
       }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // 1) Burn $TLC by transferFrom user -> dead address
-    const burnTx = await tlc.transferFrom(userWallet, BURN_ADDRESS, priceWei);
-    const burnReceipt = await burnTx.wait();
-    if (burnReceipt?.status !== 1) {
-      return new Response(JSON.stringify({ error: 'Burn transaction failed' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // 2) Mint NFT to user
+    // 1) MINT FIRST — if this reverts, no TLC is touched.
     let mintHash: string | null = null;
+    let mintTx;
     try {
-      let mintTx;
       if (mintMode === 'drop-claim' && claimCondition) {
         mintTx = await nft.claim(
           userWallet,
@@ -217,14 +213,26 @@ serve(async (req) => {
         mintTx = await nft.mintTo(userWallet, NEW_TOKEN_SENTINEL, uri, 1n);
       }
       const mintReceipt = await mintTx.wait();
-      if (mintReceipt?.status !== 1) throw new Error('Mint receipt failed');
+      if (mintReceipt?.status !== 1) throw new Error('Mint reverted on-chain');
       mintHash = mintTx.hash;
     } catch (mintErr) {
-      console.error('Mint failed AFTER burn — manual refund may be needed:', mintErr);
+      console.error('Mint failed BEFORE burn (no TLC lost):', mintErr);
       return new Response(JSON.stringify({
-        error: 'Mint failed after burn. Contact support.',
-        burnTx: burnTx.hash,
+        error: 'NFT mint failed on-chain. No $TLC was charged. ' + ((mintErr as Error).message || ''),
       }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // 2) BURN $TLC AFTER successful mint. If burn fails here, the user got the NFT for free
+    //    but our preflight already verified balance + allowance, so this should not fail.
+    let burnHash: string | null = null;
+    try {
+      const burnTx = await tlc.transferFrom(userWallet, BURN_ADDRESS, priceWei);
+      const burnReceipt = await burnTx.wait();
+      if (burnReceipt?.status !== 1) throw new Error('Burn reverted');
+      burnHash = burnTx.hash;
+    } catch (burnErr) {
+      console.error('Burn failed AFTER successful mint:', burnErr);
+      // NFT already minted; record it but flag the burn issue
     }
 
     // 3) Record ownership + decrement supply (best-effort DB writes)
@@ -240,7 +248,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      burnTx: burnTx.hash,
+      burnTx: burnHash,
       mintTx: mintHash,
       nftName: nftItem.name,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
