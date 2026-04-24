@@ -186,6 +186,7 @@ export default function Rewards() {
       setSelectedItem(null);
       fetchNFTItems();
       fetchUserBalance();
+      fetchOwnedNFTs();
     } catch (error: any) {
       toast({
         title: "Mint failed",
