@@ -56,6 +56,7 @@ export default function Rewards() {
   const [selectedItem, setSelectedItem] = useState<NFTItem | null>(null);
   const [purchasing, setPurchasing] = useState(false);
   const [ownedItemIds, setOwnedItemIds] = useState<Set<string>>(new Set());
+  const [ownedNFTs, setOwnedNFTs] = useState<OwnedNFT[]>([]);
 
   useEffect(() => {
     fetchNFTItems();
