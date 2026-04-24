@@ -89,6 +89,7 @@ export default function Profile() {
   const [repositioning, setRepositioning] = useState(false);
   const [coverPosition, setCoverPosition] = useState<string>('center');
   const [draftPosition, setDraftPosition] = useState<string>('center');
+  const [viewerImage, setViewerImage] = useState<{ url: string; alt: string } | null>(null);
   const coverRef = useRef<HTMLDivElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
