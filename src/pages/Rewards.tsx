@@ -28,7 +28,12 @@ interface NFTItem {
 }
 
 const TLC_CONTRACT = '0xf95368bF95bAB7E83447E249B6C7e53B3bb858b0';
-const ERC20_BALANCE_ABI = ['function balanceOf(address) view returns (uint256)'];
+const AMOY_CHAIN_ID = '0x13882'; // 80002
+const ERC20_ABI = [
+  'function balanceOf(address) view returns (uint256)',
+  'function allowance(address owner, address spender) view returns (uint256)',
+  'function approve(address spender, uint256 amount) returns (bool)',
+];
 
 export default function Rewards() {
   const { user } = useAuth();
@@ -53,7 +58,7 @@ export default function Rewards() {
       try {
         const { ethers } = await import('ethers');
         const provider = new ethers.BrowserProvider(window.ethereum);
-        const contract = new ethers.Contract(TLC_CONTRACT, ERC20_BALANCE_ABI, provider);
+        const contract = new ethers.Contract(TLC_CONTRACT, ERC20_ABI, provider);
         const bal = await contract.balanceOf(account);
         setOnChainBalance(parseFloat(ethers.formatUnits(bal, 18)));
       } catch (e) {
@@ -89,10 +94,10 @@ export default function Rewards() {
   const purchaseNFT = async () => {
     if (!selectedItem || !user) return;
 
-    if (!account) {
+    if (!account || !window.ethereum) {
       toast({
         title: "Wallet not connected",
-        description: "Please connect your wallet to purchase NFTs",
+        description: "Please connect your wallet to mint NFTs",
         variant: "destructive",
       });
       return;
@@ -101,25 +106,79 @@ export default function Rewards() {
     setPurchasing(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('purchase-nft', {
-        body: { nftItemId: selectedItem.id },
+      const { ethers } = await import('ethers');
+
+      // Ensure user is on Amoy
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: AMOY_CHAIN_ID }],
+        });
+      } catch (switchErr: any) {
+        if (switchErr?.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: AMOY_CHAIN_ID,
+              chainName: 'Polygon Amoy',
+              rpcUrls: ['https://rpc-amoy.polygon.technology'],
+              nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+              blockExplorerUrls: ['https://amoy.polygonscan.com'],
+            }],
+          });
+        } else {
+          throw switchErr;
+        }
+      }
+
+      const browserProvider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await browserProvider.getSigner();
+      const tlc = new ethers.Contract(TLC_CONTRACT, ERC20_ABI, signer);
+      const priceWei = ethers.parseUnits(String(selectedItem.price), 18);
+
+      // First call to learn the minter (spender) address from the edge function
+      const probe = await supabase.functions.invoke('purchase-nft', {
+        body: { nftItemId: selectedItem.id, userWallet: account },
       });
 
-      if (error) throw new Error(error.message || 'Purchase failed');
-      if (data?.error) throw new Error(data.error);
+      const probeData: any = probe.data;
+      const probeErrMsg: string | undefined = probe.error?.message;
 
-      toast({
-        title: "Purchase successful!",
-        description: `${selectedItem.name} has been added to your collection.`,
-      });
+      if (probeData?.needsApproval && probeData?.spender) {
+        toast({
+          title: "Approval needed",
+          description: "Approve $TLC spending in your wallet to continue.",
+        });
+        const approveTx = await tlc.approve(probeData.spender, priceWei);
+        await approveTx.wait();
+
+        // Retry mint
+        const retry = await supabase.functions.invoke('purchase-nft', {
+          body: { nftItemId: selectedItem.id, userWallet: account },
+        });
+        if (retry.error) throw new Error(retry.error.message);
+        if (retry.data?.error) throw new Error(retry.data.error);
+
+        toast({
+          title: "Mint successful! 🎉",
+          description: `${selectedItem.name} is now in your wallet.`,
+        });
+      } else if (probe.error || probeData?.error) {
+        throw new Error(probeData?.error || probeErrMsg || 'Mint failed');
+      } else {
+        toast({
+          title: "Mint successful! 🎉",
+          description: `${selectedItem.name} is now in your wallet.`,
+        });
+      }
 
       setSelectedItem(null);
       fetchNFTItems();
       fetchUserBalance();
     } catch (error: any) {
       toast({
-        title: "Purchase failed",
-        description: error.message,
+        title: "Mint failed",
+        description: error.message || 'Something went wrong',
         variant: "destructive",
       });
     } finally {
@@ -201,10 +260,10 @@ export default function Rewards() {
                 <Button
                   className="w-full shadow-sm"
                   onClick={() => setSelectedItem(item)}
-                  disabled={userBalance < item.price}
+                  disabled={!account || onChainBalance < item.price}
                 >
                   <ShoppingBag className="h-4 w-4 mr-2" />
-                  {userBalance >= item.price ? 'Purchase NFT' : 'Insufficient Balance'}
+                  {!account ? 'Connect Wallet' : onChainBalance >= item.price ? 'Mint NFT' : 'Insufficient $TLC'}
                 </Button>
               </CardFooter>
             </Card>
