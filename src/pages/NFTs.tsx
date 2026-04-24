@@ -430,7 +430,15 @@ export default function NFTs() {
                         </div>
                       )}
                     </CardContent>
-                    <CardFooter>
+                    <CardFooter className="flex flex-col gap-2">
+                      <Button
+                        className="w-full"
+                        onClick={() => shareToFeed(nft)}
+                        disabled={sharingId === nft.id}
+                      >
+                        <Share2 className="h-4 w-4 mr-2" />
+                        {sharingId === nft.id ? 'Sharing...' : 'Share to my Feed'}
+                      </Button>
                       {nft.transaction_hash ? (
                         <Button
                           variant="outline"
