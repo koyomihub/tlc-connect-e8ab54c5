@@ -40,7 +40,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     { path: '/groups', label: 'Groups', icon: Users },
     { path: '/people', label: 'People', icon: UserPlus },
     { path: '/earn', label: 'Earn', icon: Coins },
-    { path: '/rewards', label: 'Rewards', icon: Gift },
+    { path: '/rewards', label: 'NFTs', icon: Gift },
     { path: '/organizations', label: 'Organizations', icon: Building2 },
   ];
 
