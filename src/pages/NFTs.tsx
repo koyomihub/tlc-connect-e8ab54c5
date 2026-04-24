@@ -452,7 +452,7 @@ export default function NFTs() {
                 Cancel
               </Button>
               <Button onClick={purchaseNFT} disabled={purchasing || !account}>
-                {purchasing ? "Processing..." : "Confirm Purchase"}
+                {purchasing ? "Processing..." : "Confirm Mint"}
               </Button>
             </DialogFooter>
           </DialogContent>
