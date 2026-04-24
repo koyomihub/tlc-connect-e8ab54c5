@@ -400,9 +400,9 @@ export default function NFTs() {
         <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Confirm Purchase</DialogTitle>
+              <DialogTitle>Confirm Mint</DialogTitle>
               <DialogDescription>
-                You are about to purchase this NFT reward
+                You are about to mint this NFT
               </DialogDescription>
             </DialogHeader>
 
