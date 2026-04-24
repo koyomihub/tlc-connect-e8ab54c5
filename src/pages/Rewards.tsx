@@ -43,10 +43,12 @@ export default function Rewards() {
   const [onChainBalance, setOnChainBalance] = useState<number>(0);
   const [selectedItem, setSelectedItem] = useState<NFTItem | null>(null);
   const [purchasing, setPurchasing] = useState(false);
+  const [ownedItemIds, setOwnedItemIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchNFTItems();
     fetchUserBalance();
+    fetchOwnedNFTs();
   }, [user]);
 
   useEffect(() => {
@@ -77,6 +79,15 @@ export default function Rewards() {
       .order('price', { ascending: true });
 
     setNftItems(data || []);
+  };
+
+  const fetchOwnedNFTs = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('user_nfts')
+      .select('nft_item_id')
+      .eq('user_id', user.id);
+    setOwnedItemIds(new Set((data || []).map((r: any) => r.nft_item_id)));
   };
 
   const fetchUserBalance = async () => {
@@ -175,6 +186,7 @@ export default function Rewards() {
       setSelectedItem(null);
       fetchNFTItems();
       fetchUserBalance();
+      fetchOwnedNFTs();
     } catch (error: any) {
       toast({
         title: "Mint failed",
@@ -260,10 +272,16 @@ export default function Rewards() {
                 <Button
                   className="w-full shadow-sm"
                   onClick={() => setSelectedItem(item)}
-                  disabled={!account || onChainBalance < item.price}
+                  disabled={!account || ownedItemIds.has(item.id) || onChainBalance < item.price}
                 >
                   <ShoppingBag className="h-4 w-4 mr-2" />
-                  {!account ? 'Connect Wallet' : onChainBalance >= item.price ? 'Mint NFT' : 'Insufficient $TLC'}
+                  {ownedItemIds.has(item.id)
+                    ? 'Already Minted'
+                    : !account
+                      ? 'Connect Wallet'
+                      : onChainBalance >= item.price
+                        ? 'Mint NFT'
+                        : 'Insufficient $TLC'}
                 </Button>
               </CardFooter>
             </Card>

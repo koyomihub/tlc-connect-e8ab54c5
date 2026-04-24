@@ -69,6 +69,18 @@ serve(async (req) => {
       });
     }
 
+    // Enforce one-per-user limit
+    const { count: ownedCount } = await supabase
+      .from('user_nfts')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('nft_item_id', nftItemId);
+    if ((ownedCount ?? 0) > 0) {
+      return new Response(JSON.stringify({ error: 'You have already minted this NFT. Limit 1 per user.' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Fetch NFT item
     const { data: nftItem, error: nftErr } = await supabase
       .from('nft_items')
