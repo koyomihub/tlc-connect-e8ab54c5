@@ -861,6 +861,42 @@ export default function GroupDetail() {
                   )}
                 </div>
               </div>
+              <div className="flex flex-wrap items-center gap-2">
+              {isSiteAdmin && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Group (Admin)
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete this group?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This permanently deletes the group, its messages, and removes all members. This cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-destructive text-destructive-foreground"
+                        onClick={async () => {
+                          const { error } = await supabase.from('groups').delete().eq('id', id);
+                          if (error) {
+                            toast({ title: 'Error deleting group', description: error.message, variant: 'destructive' });
+                          } else {
+                            toast({ title: 'Group deleted' });
+                            navigate('/groups');
+                          }
+                        }}
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
               {isAdmin && (
                 <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
                   <DialogTrigger asChild>
