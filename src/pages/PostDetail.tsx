@@ -12,6 +12,7 @@ import { Heart, MessageCircle, ArrowLeft, Trash2, Reply } from 'lucide-react';
 import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
 import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 
 interface Post {
   id: string;
@@ -45,6 +46,7 @@ export default function PostDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isAdmin = useIsAdmin();
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -306,8 +308,13 @@ export default function PostDetail() {
                 </p>
               </div>
             </div>
-            {user?.id === post.user_id && (
-              <Button variant="ghost" size="sm" onClick={deletePost}>
+            {(user?.id === post.user_id || isAdmin) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={deletePost}
+                title={user?.id === post.user_id ? 'Delete post' : 'Delete (Admin)'}
+              >
                 <Trash2 className="h-4 w-4" />
               </Button>
             )}
