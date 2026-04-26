@@ -3,7 +3,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Bell } from 'lucide-react';
+import { Bell, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
@@ -121,12 +121,18 @@ export default function Notifications() {
               >
                 <CardHeader>
                   <div className="flex items-start space-x-3">
-                    <Avatar>
-                      <AvatarImage src={notification.actor?.avatar_url} />
-                      <AvatarFallback>
-                        {notification.actor?.display_name?.[0]?.toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
+                    {notification.type === 'group_invite' ? (
+                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <Users className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    ) : (
+                      <Avatar>
+                        <AvatarImage src={notification.actor?.avatar_url} />
+                        <AvatarFallback>
+                          {notification.actor?.display_name?.[0]?.toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <div className="flex-1 space-y-1">
                       <p className="text-sm">{notification.content}</p>
                       <p className="text-xs text-muted-foreground">
