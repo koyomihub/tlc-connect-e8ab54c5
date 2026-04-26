@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 
 type PostPrivacy = 'public' | 'friends';
 
@@ -64,6 +65,7 @@ type FeedItem =
 
 export default function Feed() {
   const { user } = useAuth();
+  const isAdmin = useIsAdmin();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -606,7 +608,7 @@ export default function Feed() {
                       </div>
                     </div>
                   </div>
-                  {post.user_id === user?.id && item.kind === 'post' && (
+                  {item.kind === 'post' && (post.user_id === user?.id || isAdmin) && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -614,16 +616,18 @@ export default function Feed() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(post)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
+                        {post.user_id === user?.id && (
+                          <DropdownMenuItem onClick={() => openEdit(post)}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() => deletePost(post.id)}
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
+                          {post.user_id === user?.id ? 'Delete' : 'Delete (Admin)'}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
