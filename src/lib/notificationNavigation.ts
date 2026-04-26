@@ -91,6 +91,11 @@ export const resolveNotificationTarget = async (notification: any, currentUserId
     return `/posts/${notification.post_id}`;
   }
 
+  // Prefer explicit group_id when present on group_invite notifications
+  if (notification.type === 'group_invite' && notification.group_id) {
+    return `/groups/${notification.group_id}`;
+  }
+
   if (notification.type === 'group_invite' && notification.actor_id && currentUserId) {
     const invitationGroupId = await getGroupFromInvitation(currentUserId, notification.actor_id);
     if (invitationGroupId) return `/groups/${invitationGroupId}`;
