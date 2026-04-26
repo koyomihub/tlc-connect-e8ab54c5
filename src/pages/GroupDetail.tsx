@@ -931,6 +931,7 @@ export default function GroupDetail() {
                   </DialogContent>
                 </Dialog>
               )}
+              </div>
             </div>
             {group.description && (
               <p className="text-muted-foreground mt-2">{group.description}</p>
