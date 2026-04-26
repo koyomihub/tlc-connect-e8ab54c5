@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -130,12 +130,18 @@ export function NotificationBell() {
                   onClick={() => handleClick(notification)}
                 >
                   <div className="flex items-start space-x-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={notification.actor?.avatar_url} />
-                      <AvatarFallback>
-                        {notification.actor?.display_name?.[0]?.toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
+                    {notification.type === 'group_invite' ? (
+                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    ) : (
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={notification.actor?.avatar_url} />
+                        <AvatarFallback>
+                          {notification.actor?.display_name?.[0]?.toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <div className="flex-1 space-y-1">
                       <p className="text-sm">{notification.content}</p>
                       <p className="text-xs text-muted-foreground">

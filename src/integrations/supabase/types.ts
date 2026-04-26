@@ -307,6 +307,7 @@ export type Database = {
           actor_id: string | null
           content: string
           created_at: string | null
+          group_id: string | null
           id: string
           is_read: boolean | null
           post_id: string | null
@@ -317,6 +318,7 @@ export type Database = {
           actor_id?: string | null
           content: string
           created_at?: string | null
+          group_id?: string | null
           id?: string
           is_read?: boolean | null
           post_id?: string | null
@@ -327,6 +329,7 @@ export type Database = {
           actor_id?: string | null
           content?: string
           created_at?: string | null
+          group_id?: string | null
           id?: string
           is_read?: boolean | null
           post_id?: string | null
@@ -339,6 +342,13 @@ export type Database = {
             columns: ["actor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           },
           {
