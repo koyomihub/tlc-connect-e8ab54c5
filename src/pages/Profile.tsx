@@ -646,7 +646,10 @@ export default function Profile() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="display_name">Display Name</Label>
-                    <Input id="display_name" value={formData.display_name} onChange={(e) => setFormData({ ...formData, display_name: e.target.value })} />
+                    <Input id="display_name" value={formData.display_name} disabled readOnly className="bg-muted cursor-not-allowed" />
+                    <p className="text-xs text-muted-foreground">
+                      Your name is locked. This is a school-verified system — contact an admin if your name is incorrect.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="bio">Bio</Label>
