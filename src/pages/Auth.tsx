@@ -377,26 +377,28 @@ export default function Auth() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>
-                    <Input
+                    <PasswordInput
                       id="signup-password"
-                      type="password"
                       placeholder="At least 8 characters"
                       minLength={8}
                       value={signUpData.password}
-                      onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
+                      onChange={(v) => setSignUpData({ ...signUpData, password: v })}
                       required
-                      className="placeholder:italic placeholder:text-muted-foreground/50"
+                      show={showSignUpPw}
+                      onToggleShow={() => setShowSignUpPw((s) => !s)}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-confirm">Confirm Password</Label>
-                    <Input
+                    <PasswordInput
                       id="signup-confirm"
-                      type="password"
+                      placeholder="Re-enter your password"
                       minLength={8}
                       value={signUpData.confirmPassword}
-                      onChange={(e) => setSignUpData({ ...signUpData, confirmPassword: e.target.value })}
+                      onChange={(v) => setSignUpData({ ...signUpData, confirmPassword: v })}
                       required
+                      show={showSignUpConfirmPw}
+                      onToggleShow={() => setShowSignUpConfirmPw((s) => !s)}
                     />
                   </div>
                   <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
