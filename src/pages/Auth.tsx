@@ -72,6 +72,9 @@ export default function Auth() {
 
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [otp, setOtp] = useState('');
+  const [showSignInPw, setShowSignInPw] = useState(false);
+  const [showSignUpPw, setShowSignUpPw] = useState(false);
+  const [showSignUpConfirmPw, setShowSignUpConfirmPw] = useState(false);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
