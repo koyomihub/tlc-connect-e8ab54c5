@@ -22,7 +22,7 @@ export default function Auth() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
-  const [signInData, setSignInData] = useState({ email: '', password: '' });
+  const [signInData, setSignInData] = useState({ emailLocal: '', password: '' });
   const [signUpData, setSignUpData] = useState({
     firstName: '',
     lastName: '',
@@ -39,7 +39,8 @@ export default function Auth() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await signIn(signInData.email, signInData.password);
+      const fullEmail = `${signInData.emailLocal.trim().toLowerCase()}${SCHOOL_DOMAIN}`;
+      await signIn(fullEmail, signInData.password);
     } finally {
       setIsLoading(false);
     }
