@@ -8,7 +8,45 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
+import { Eye, EyeOff } from 'lucide-react';
 import logo from '@/assets/tlc-connect-logo.png';
+
+interface PasswordInputProps {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  required?: boolean;
+  minLength?: number;
+  show: boolean;
+  onToggleShow: () => void;
+}
+
+function PasswordInput({ id, value, onChange, placeholder, required, minLength, show, onToggleShow }: PasswordInputProps) {
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        type={show ? 'text' : 'password'}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        minLength={minLength}
+        className="pr-10 placeholder:italic placeholder:text-muted-foreground/50"
+      />
+      <button
+        type="button"
+        onClick={onToggleShow}
+        tabIndex={-1}
+        aria-label={show ? 'Hide password' : 'Show password'}
+        className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
 
 const SCHOOL_DOMAIN = '@thelewiscollege.edu.ph';
 
