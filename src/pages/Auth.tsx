@@ -297,14 +297,14 @@ export default function Auth() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signin-password">Password</Label>
-                    <Input
+                    <PasswordInput
                       id="signin-password"
-                      type="password"
                       placeholder="Enter your password"
                       value={signInData.password}
-                      onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
+                      onChange={(v) => setSignInData({ ...signInData, password: v })}
                       required
-                      className="placeholder:italic placeholder:text-muted-foreground/50"
+                      show={showSignInPw}
+                      onToggleShow={() => setShowSignInPw((s) => !s)}
                     />
                   </div>
                   <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
