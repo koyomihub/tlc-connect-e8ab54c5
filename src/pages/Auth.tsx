@@ -8,7 +8,45 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
+import { Eye, EyeOff } from 'lucide-react';
 import logo from '@/assets/tlc-connect-logo.png';
+
+interface PasswordInputProps {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  required?: boolean;
+  minLength?: number;
+  show: boolean;
+  onToggleShow: () => void;
+}
+
+function PasswordInput({ id, value, onChange, placeholder, required, minLength, show, onToggleShow }: PasswordInputProps) {
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        type={show ? 'text' : 'password'}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        minLength={minLength}
+        className="pr-10 placeholder:italic placeholder:text-muted-foreground/50"
+      />
+      <button
+        type="button"
+        onClick={onToggleShow}
+        tabIndex={-1}
+        aria-label={show ? 'Hide password' : 'Show password'}
+        className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
 
 const SCHOOL_DOMAIN = '@thelewiscollege.edu.ph';
 
@@ -34,6 +72,9 @@ export default function Auth() {
 
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [otp, setOtp] = useState('');
+  const [showSignInPw, setShowSignInPw] = useState(false);
+  const [showSignUpPw, setShowSignUpPw] = useState(false);
+  const [showSignUpConfirmPw, setShowSignUpConfirmPw] = useState(false);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,9 +170,13 @@ export default function Auth() {
         description: `We sent a 6-digit verification code to ${fullEmail}.`,
       });
     } catch (error: any) {
+      const msg: string = error?.message || '';
+      const isRateLimit = /rate limit|too many|over_email_send_rate_limit/i.test(msg);
       toast({
         title: 'Sign up failed',
-        description: error.message,
+        description: isRateLimit
+          ? "Too many signup emails are being sent right now. Please wait a few minutes and try again."
+          : msg,
         variant: 'destructive',
       });
     } finally {
@@ -252,14 +297,14 @@ export default function Auth() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signin-password">Password</Label>
-                    <Input
+                    <PasswordInput
                       id="signin-password"
-                      type="password"
                       placeholder="Enter your password"
                       value={signInData.password}
-                      onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
+                      onChange={(v) => setSignInData({ ...signInData, password: v })}
                       required
-                      className="placeholder:italic placeholder:text-muted-foreground/50"
+                      show={showSignInPw}
+                      onToggleShow={() => setShowSignInPw((s) => !s)}
                     />
                   </div>
                   <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
@@ -332,26 +377,28 @@ export default function Auth() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>
-                    <Input
+                    <PasswordInput
                       id="signup-password"
-                      type="password"
                       placeholder="At least 8 characters"
                       minLength={8}
                       value={signUpData.password}
-                      onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
+                      onChange={(v) => setSignUpData({ ...signUpData, password: v })}
                       required
-                      className="placeholder:italic placeholder:text-muted-foreground/50"
+                      show={showSignUpPw}
+                      onToggleShow={() => setShowSignUpPw((s) => !s)}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-confirm">Confirm Password</Label>
-                    <Input
+                    <PasswordInput
                       id="signup-confirm"
-                      type="password"
+                      placeholder="Re-enter your password"
                       minLength={8}
                       value={signUpData.confirmPassword}
-                      onChange={(e) => setSignUpData({ ...signUpData, confirmPassword: e.target.value })}
+                      onChange={(v) => setSignUpData({ ...signUpData, confirmPassword: v })}
                       required
+                      show={showSignUpConfirmPw}
+                      onToggleShow={() => setShowSignUpConfirmPw((s) => !s)}
                     />
                   </div>
                   <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
