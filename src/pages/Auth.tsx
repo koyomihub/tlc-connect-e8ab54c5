@@ -170,9 +170,13 @@ export default function Auth() {
         description: `We sent a 6-digit verification code to ${fullEmail}.`,
       });
     } catch (error: any) {
+      const msg: string = error?.message || '';
+      const isRateLimit = /rate limit|too many|over_email_send_rate_limit/i.test(msg);
       toast({
         title: 'Sign up failed',
-        description: error.message,
+        description: isRateLimit
+          ? "Too many signup emails are being sent right now. Please wait a few minutes and try again."
+          : msg,
         variant: 'destructive',
       });
     } finally {
