@@ -62,6 +62,11 @@ export default function GroupDetail() {
   const [draftPosition, setDraftPosition] = useState<string>('center');
   const coverRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [messages]);
 
   useEffect(() => {
     fetchGroup();
