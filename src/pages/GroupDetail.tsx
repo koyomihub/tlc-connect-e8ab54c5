@@ -1079,34 +1079,34 @@ export default function GroupDetail() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="h-[600px] flex flex-col">
-            <CardHeader>
+          <Card className="h-[70vh] sm:h-[600px] flex flex-col overflow-hidden">
+            <CardHeader className="py-3 px-4 border-b shrink-0">
               <h3 className="font-semibold">Group Chat</h3>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col space-y-4 p-4">
-              <ScrollArea className="flex-1 pr-4">
+            <CardContent className="flex-1 flex flex-col p-0 min-h-0">
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 sm:px-4 py-3">
                 <div className="space-y-4">
                   {messages.map((msg) => {
                     const isOwn = msg.user_id === user?.id;
                     return (
-                      <div key={msg.id} className={`flex items-start space-x-2 ${isOwn ? 'justify-end' : ''}`}>
+                      <div key={msg.id} className={`flex items-start gap-2 w-full ${isOwn ? 'justify-end' : 'justify-start'}`}>
                         {!isOwn && (
-                          <Avatar className="h-8 w-8">
+                          <Avatar className="h-8 w-8 shrink-0">
                             <AvatarImage src={msg.profiles?.avatar_url} />
                             <AvatarFallback>{msg.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
                           </Avatar>
                         )}
-                        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[70%]`}>
+                        <div className={`flex flex-col min-w-0 ${isOwn ? 'items-end' : 'items-start'} max-w-[80%] sm:max-w-[70%]`}>
                           {!isOwn && (
-                            <p className="text-xs font-semibold mb-1 text-muted-foreground">
+                            <p className="text-xs font-semibold mb-1 text-muted-foreground truncate max-w-full">
                               {msg.profiles?.display_name || 'Unknown'}
                             </p>
                           )}
-                          <div className={`rounded-lg px-4 py-2 ${isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                          <div className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-2 max-w-full ${isOwn ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-muted rounded-bl-sm'}`}>
+                            <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm sm:text-base leading-relaxed">{msg.content}</p>
                           </div>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <p className="text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-[11px] sm:text-xs text-muted-foreground">
                               {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                             </p>
                             {isOwn && (
@@ -1117,7 +1117,7 @@ export default function GroupDetail() {
                           </div>
                         </div>
                         {isOwn && (
-                          <Avatar className="h-8 w-8">
+                          <Avatar className="h-8 w-8 shrink-0">
                             <AvatarImage src={msg.profiles?.avatar_url} />
                             <AvatarFallback>{msg.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
                           </Avatar>
@@ -1125,10 +1125,12 @@ export default function GroupDetail() {
                       </div>
                     );
                   })}
+                  <div ref={messagesEndRef} />
                 </div>
-              </ScrollArea>
-              <div className="flex items-center space-x-2">
+              </div>
+              <div className="flex items-center gap-2 p-3 border-t bg-card shrink-0">
                 <Input
+                  className="flex-1 min-w-0"
                   placeholder="Type a message..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
@@ -1139,7 +1141,7 @@ export default function GroupDetail() {
                     }
                   }}
                 />
-                <Button onClick={sendMessage} size="icon">
+                <Button onClick={sendMessage} size="icon" className="shrink-0">
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
