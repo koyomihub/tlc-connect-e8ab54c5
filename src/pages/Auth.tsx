@@ -267,10 +267,11 @@ export default function Auth() {
                       <Input
                         id="signup-first"
                         type="text"
-                        placeholder="Allan Christian"
+                        placeholder="Juan"
                         value={signUpData.firstName}
                         onChange={(e) => setSignUpData({ ...signUpData, firstName: e.target.value })}
                         required
+                        className="placeholder:italic placeholder:text-muted-foreground/50"
                       />
                     </div>
                     <div className="space-y-2">
@@ -282,6 +283,7 @@ export default function Auth() {
                         value={signUpData.lastName}
                         onChange={(e) => setSignUpData({ ...signUpData, lastName: e.target.value })}
                         required
+                        className="placeholder:italic placeholder:text-muted-foreground/50"
                       />
                     </div>
                   </div>
@@ -290,9 +292,10 @@ export default function Auth() {
                     <Input
                       id="signup-suffix"
                       type="text"
-                      placeholder="Jr., Sr., II"
+                      placeholder="Jr., Sr., II, etc."
                       value={signUpData.suffix}
                       onChange={(e) => setSignUpData({ ...signUpData, suffix: e.target.value })}
+                      className="placeholder:italic placeholder:text-muted-foreground/50"
                     />
                   </div>
                   <p className="text-xs text-muted-foreground -mt-2">
@@ -304,10 +307,10 @@ export default function Auth() {
                       <Input
                         id="signup-email"
                         type="text"
-                        placeholder="firstname.lastname"
+                        placeholder="firstnamelastname"
                         value={signUpData.emailLocal}
                         onChange={(e) => setSignUpData({ ...signUpData, emailLocal: e.target.value })}
-                        className="rounded-r-none"
+                        className="rounded-r-none placeholder:italic placeholder:text-muted-foreground/50"
                         required
                       />
                       <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-input bg-muted text-sm text-muted-foreground whitespace-nowrap">
@@ -328,6 +331,7 @@ export default function Auth() {
                       value={signUpData.password}
                       onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
                       required
+                      className="placeholder:italic placeholder:text-muted-foreground/50"
                     />
                   </div>
                   <div className="space-y-2">
