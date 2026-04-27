@@ -22,7 +22,7 @@ export default function Auth() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
-  const [signInData, setSignInData] = useState({ email: '', password: '' });
+  const [signInData, setSignInData] = useState({ emailLocal: '', password: '' });
   const [signUpData, setSignUpData] = useState({
     firstName: '',
     lastName: '',
@@ -39,7 +39,8 @@ export default function Auth() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await signIn(signInData.email, signInData.password);
+      const fullEmail = `${signInData.emailLocal.trim().toLowerCase()}${SCHOOL_DOMAIN}`;
+      await signIn(fullEmail, signInData.password);
     } finally {
       setIsLoading(false);
     }
@@ -234,23 +235,31 @@ export default function Auth() {
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signin-email">School Email</Label>
-                    <Input
-                      id="signin-email"
-                      type="email"
-                      placeholder={`you${SCHOOL_DOMAIN}`}
-                      value={signInData.email}
-                      onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
-                      required
-                    />
+                    <div className="flex">
+                      <Input
+                        id="signin-email"
+                        type="text"
+                        placeholder="firstnamelastname"
+                        value={signInData.emailLocal}
+                        onChange={(e) => setSignInData({ ...signInData, emailLocal: e.target.value })}
+                        className="rounded-r-none placeholder:italic placeholder:text-muted-foreground/50"
+                        required
+                      />
+                      <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-input bg-muted text-sm text-muted-foreground whitespace-nowrap">
+                        {SCHOOL_DOMAIN}
+                      </span>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signin-password">Password</Label>
                     <Input
                       id="signin-password"
                       type="password"
+                      placeholder="Enter your password"
                       value={signInData.password}
                       onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
                       required
+                      className="placeholder:italic placeholder:text-muted-foreground/50"
                     />
                   </div>
                   <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
