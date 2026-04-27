@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -7,8 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import logo from '@/assets/tlc-connect-logo.png';
 
 interface PasswordInputProps {
@@ -50,15 +57,13 @@ function PasswordInput({ id, value, onChange, placeholder, required, minLength, 
 
 const SCHOOL_DOMAIN = '@thelewiscollege.edu.ph';
 
-// Each word: capital letter, then lowercase letters; allow hyphenated names; allow multiple words.
 const NAME_PATTERN = /^[A-Z][a-z]+(-[A-Z][a-z]+)*( [A-Z][a-z]+(-[A-Z][a-z]+)*)*$/;
-// Suffix: e.g. Jr., Sr., II, III, IV
 const SUFFIX_PATTERN = /^[A-Z][a-zA-Z]*\.?$|^(II|III|IV|V)$/;
 
 export default function Auth() {
   const { signIn } = useAuth();
-  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
 
   const [signInData, setSignInData] = useState({ emailLocal: '', password: '' });
   const [signUpData, setSignUpData] = useState({
@@ -70,11 +75,12 @@ export default function Auth() {
     confirmPassword: '',
   });
 
-  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
-  const [otp, setOtp] = useState('');
   const [showSignInPw, setShowSignInPw] = useState(false);
   const [showSignUpPw, setShowSignUpPw] = useState(false);
   const [showSignUpConfirmPw, setShowSignUpConfirmPw] = useState(false);
+
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [signedUpEmailLocal, setSignedUpEmailLocal] = useState('');
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,19 +170,25 @@ export default function Auth() {
 
       if (error) throw error;
 
-      setPendingEmail(fullEmail);
-      toast({
-        title: 'Check your school email',
-        description: `We sent a 6-digit verification code to ${fullEmail}.`,
+      // Sign out any session created by signUp so the user must explicitly sign in.
+      await supabase.auth.signOut();
+
+      setSignedUpEmailLocal(emailLocal);
+      setSuccessOpen(true);
+
+      // Reset signup form
+      setSignUpData({
+        firstName: '',
+        lastName: '',
+        suffix: '',
+        emailLocal: '',
+        password: '',
+        confirmPassword: '',
       });
     } catch (error: any) {
-      const msg: string = error?.message || '';
-      const isRateLimit = /rate limit|too many|over_email_send_rate_limit/i.test(msg);
       toast({
         title: 'Sign up failed',
-        description: isRateLimit
-          ? "Too many signup emails are being sent right now. Please wait a few minutes and try again."
-          : msg,
+        description: error?.message || 'Something went wrong. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -184,42 +196,10 @@ export default function Auth() {
     }
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pendingEmail) return;
-    if (!/^\d{6}$/.test(otp)) {
-      toast({ title: 'Invalid code', description: 'Enter the 6-digit code from your email.', variant: 'destructive' });
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: pendingEmail,
-        token: otp,
-        type: 'signup',
-      });
-      if (error) throw error;
-      toast({ title: 'Account verified!', description: 'Welcome to TLC Connect.' });
-      navigate('/feed');
-    } catch (error: any) {
-      toast({ title: 'Verification failed', description: error.message, variant: 'destructive' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResendOtp = async () => {
-    if (!pendingEmail) return;
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email: pendingEmail });
-      if (error) throw error;
-      toast({ title: 'Code resent', description: `A new code was sent to ${pendingEmail}.` });
-    } catch (error: any) {
-      toast({ title: 'Could not resend', description: error.message, variant: 'destructive' });
-    } finally {
-      setIsLoading(false);
-    }
+  const handleGoToSignIn = () => {
+    setSuccessOpen(false);
+    setActiveTab('signin');
+    setSignInData({ emailLocal: signedUpEmailLocal, password: '' });
   };
 
   return (
@@ -236,178 +216,143 @@ export default function Auth() {
         </CardHeader>
 
         <CardContent>
-          {pendingEmail ? (
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <div className="space-y-2 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Enter the 6-digit code sent to <strong>{pendingEmail}</strong>
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="otp">Verification code</Label>
-                <Input
-                  id="otp"
-                  inputMode="numeric"
-                  pattern="\d{6}"
-                  maxLength={6}
-                  placeholder="123456"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  className="text-center tracking-[0.5em] text-lg"
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
-                {isLoading ? 'Verifying...' : 'Verify & Sign In'}
-              </Button>
-              <div className="flex justify-between text-sm">
-                <button type="button" onClick={handleResendOtp} className="text-primary hover:underline" disabled={isLoading}>
-                  Resend code
-                </button>
-                <button type="button" onClick={() => { setPendingEmail(null); setOtp(''); }} className="text-muted-foreground hover:underline">
-                  Use a different email
-                </button>
-              </div>
-            </form>
-          ) : (
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-              </TabsList>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'signin' | 'signup')} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Sign In</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="signin" className="space-y-4 mt-4">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">School Email</Label>
-                    <div className="flex">
-                      <Input
-                        id="signin-email"
-                        type="text"
-                        placeholder="firstnamelastname"
-                        value={signInData.emailLocal}
-                        onChange={(e) => setSignInData({ ...signInData, emailLocal: e.target.value })}
-                        className="rounded-r-none placeholder:italic placeholder:text-muted-foreground/50"
-                        required
-                      />
-                      <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-input bg-muted text-sm text-muted-foreground whitespace-nowrap">
-                        {SCHOOL_DOMAIN}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
-                    <PasswordInput
-                      id="signin-password"
-                      placeholder="Enter your password"
-                      value={signInData.password}
-                      onChange={(v) => setSignInData({ ...signInData, password: v })}
-                      required
-                      show={showSignInPw}
-                      onToggleShow={() => setShowSignInPw((s) => !s)}
-                    />
-                  </div>
-                  <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
-                    {isLoading ? 'Signing in...' : 'Sign In'}
-                  </Button>
-                </form>
-              </TabsContent>
-
-              <TabsContent value="signup" className="space-y-4 mt-4">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-first">First Name</Label>
-                      <Input
-                        id="signup-first"
-                        type="text"
-                        placeholder="Juan"
-                        value={signUpData.firstName}
-                        onChange={(e) => setSignUpData({ ...signUpData, firstName: e.target.value })}
-                        required
-                        className="placeholder:italic placeholder:text-muted-foreground/50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-last">Last Name</Label>
-                      <Input
-                        id="signup-last"
-                        type="text"
-                        placeholder="Dela Cruz"
-                        value={signUpData.lastName}
-                        onChange={(e) => setSignUpData({ ...signUpData, lastName: e.target.value })}
-                        required
-                        className="placeholder:italic placeholder:text-muted-foreground/50"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-suffix">Suffix <span className="text-muted-foreground text-xs">(optional)</span></Label>
+            <TabsContent value="signin" className="space-y-4 mt-4">
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signin-email">School Email</Label>
+                  <div className="flex">
                     <Input
-                      id="signup-suffix"
+                      id="signin-email"
                       type="text"
-                      placeholder="Jr., Sr., II, etc."
-                      value={signUpData.suffix}
-                      onChange={(e) => setSignUpData({ ...signUpData, suffix: e.target.value })}
+                      placeholder="firstnamelastname"
+                      value={signInData.emailLocal}
+                      onChange={(e) => setSignInData({ ...signInData, emailLocal: e.target.value })}
+                      className="rounded-r-none placeholder:italic placeholder:text-muted-foreground/50"
+                      required
+                    />
+                    <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-input bg-muted text-sm text-muted-foreground whitespace-nowrap">
+                      {SCHOOL_DOMAIN}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signin-password">Password</Label>
+                  <PasswordInput
+                    id="signin-password"
+                    placeholder="Enter your password"
+                    value={signInData.password}
+                    onChange={(v) => setSignInData({ ...signInData, password: v })}
+                    required
+                    show={showSignInPw}
+                    onToggleShow={() => setShowSignInPw((s) => !s)}
+                  />
+                </div>
+                <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
+                  {isLoading ? 'Signing in...' : 'Sign In'}
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="signup" className="space-y-4 mt-4">
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-first">First Name</Label>
+                    <Input
+                      id="signup-first"
+                      type="text"
+                      placeholder="Juan"
+                      value={signUpData.firstName}
+                      onChange={(e) => setSignUpData({ ...signUpData, firstName: e.target.value })}
+                      required
                       className="placeholder:italic placeholder:text-muted-foreground/50"
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground -mt-2">
-                    Use your real name. Names cannot be changed later.
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-last">Last Name</Label>
+                    <Input
+                      id="signup-last"
+                      type="text"
+                      placeholder="Dela Cruz"
+                      value={signUpData.lastName}
+                      onChange={(e) => setSignUpData({ ...signUpData, lastName: e.target.value })}
+                      required
+                      className="placeholder:italic placeholder:text-muted-foreground/50"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-suffix">Suffix <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                  <Input
+                    id="signup-suffix"
+                    type="text"
+                    placeholder="Jr., Sr., II, etc."
+                    value={signUpData.suffix}
+                    onChange={(e) => setSignUpData({ ...signUpData, suffix: e.target.value })}
+                    className="placeholder:italic placeholder:text-muted-foreground/50"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground -mt-2">
+                  Use your real name. Names cannot be changed later.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">School Email</Label>
+                  <div className="flex">
+                    <Input
+                      id="signup-email"
+                      type="text"
+                      placeholder="firstnamelastname"
+                      value={signUpData.emailLocal}
+                      onChange={(e) => setSignUpData({ ...signUpData, emailLocal: e.target.value })}
+                      className="rounded-r-none placeholder:italic placeholder:text-muted-foreground/50"
+                      required
+                    />
+                    <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-input bg-muted text-sm text-muted-foreground whitespace-nowrap">
+                      {SCHOOL_DOMAIN}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Only verified Lewis College emails are accepted.
                   </p>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">School Email</Label>
-                    <div className="flex">
-                      <Input
-                        id="signup-email"
-                        type="text"
-                        placeholder="firstnamelastname"
-                        value={signUpData.emailLocal}
-                        onChange={(e) => setSignUpData({ ...signUpData, emailLocal: e.target.value })}
-                        className="rounded-r-none placeholder:italic placeholder:text-muted-foreground/50"
-                        required
-                      />
-                      <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-input bg-muted text-sm text-muted-foreground whitespace-nowrap">
-                        {SCHOOL_DOMAIN}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Only verified Lewis College emails are accepted.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <PasswordInput
-                      id="signup-password"
-                      placeholder="At least 8 characters"
-                      minLength={8}
-                      value={signUpData.password}
-                      onChange={(v) => setSignUpData({ ...signUpData, password: v })}
-                      required
-                      show={showSignUpPw}
-                      onToggleShow={() => setShowSignUpPw((s) => !s)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-confirm">Confirm Password</Label>
-                    <PasswordInput
-                      id="signup-confirm"
-                      placeholder="Re-enter your password"
-                      minLength={8}
-                      value={signUpData.confirmPassword}
-                      onChange={(v) => setSignUpData({ ...signUpData, confirmPassword: v })}
-                      required
-                      show={showSignUpConfirmPw}
-                      onToggleShow={() => setShowSignUpConfirmPw((s) => !s)}
-                    />
-                  </div>
-                  <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
-                    {isLoading ? 'Creating account...' : 'Create Account'}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-          )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <PasswordInput
+                    id="signup-password"
+                    placeholder="At least 8 characters"
+                    minLength={8}
+                    value={signUpData.password}
+                    onChange={(v) => setSignUpData({ ...signUpData, password: v })}
+                    required
+                    show={showSignUpPw}
+                    onToggleShow={() => setShowSignUpPw((s) => !s)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-confirm">Confirm Password</Label>
+                  <PasswordInput
+                    id="signup-confirm"
+                    placeholder="Re-enter your password"
+                    minLength={8}
+                    value={signUpData.confirmPassword}
+                    onChange={(v) => setSignUpData({ ...signUpData, confirmPassword: v })}
+                    required
+                    show={showSignUpConfirmPw}
+                    onToggleShow={() => setShowSignUpConfirmPw((s) => !s)}
+                  />
+                </div>
+                <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
+                  {isLoading ? 'Creating account...' : 'Create Account'}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
         </CardContent>
 
         <CardFooter className="text-center text-sm text-muted-foreground">
@@ -416,6 +361,25 @@ export default function Auth() {
           </p>
         </CardFooter>
       </Card>
+
+      <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="items-center text-center space-y-3">
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+              <CheckCircle2 className="h-8 w-8 text-primary" />
+            </div>
+            <DialogTitle className="text-2xl">Sign Up Successful!</DialogTitle>
+            <DialogDescription>
+              Your TLC Connect account has been created. You can now sign in to start exploring.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center">
+            <Button onClick={handleGoToSignIn} className="w-full sm:w-auto shadow-md">
+              Sign In Now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
