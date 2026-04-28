@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
+import { useUnreadOrgs } from '@/hooks/useUnreadOrgs';
 
 export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>();
@@ -52,12 +53,19 @@ export default function OrganizationDetail() {
   const [editForm, setEditForm] = useState({ title: '', content: '' });
   const [editSaving, setEditSaving] = useState(false);
 
+  const { markAsRead: markOrgRead } = useUnreadOrgs();
+
   useEffect(() => {
     if (id) {
       fetchOrganization();
       fetchPosts();
     }
   }, [id]);
+
+  // Mark org as read whenever we visit / new post arrives while viewing
+  useEffect(() => {
+    if (id) markOrgRead(id);
+  }, [id, posts.length, markOrgRead]);
 
   useEffect(() => {
     if (user && id) checkPermissions();
