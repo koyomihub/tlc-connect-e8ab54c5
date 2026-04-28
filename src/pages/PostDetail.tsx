@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PresenceIndicator } from '@/components/PresenceIndicator';
+import { useConfirm } from '@/contexts/ConfirmContext';
 import { toast } from '@/hooks/use-toast';
 import { Heart, MessageCircle, ArrowLeft, Trash2, Reply } from 'lucide-react';
 import { awardTokens } from '@/lib/awardTokens';
@@ -48,6 +49,7 @@ export default function PostDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const confirm = useConfirm();
   const isAdmin = useIsAdmin();
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -241,6 +243,7 @@ export default function PostDetail() {
   };
 
   const deleteComment = async (commentId: string) => {
+    if (!(await confirm({ title: 'Delete this comment?', description: 'This cannot be undone.', confirmText: 'Delete', destructive: true }))) return;
     const { error } = await supabase
       .from('post_comments')
       .delete()
@@ -256,7 +259,7 @@ export default function PostDetail() {
   };
 
   const deletePost = async () => {
-    if (!confirm('Delete this post?')) return;
+    if (!(await confirm({ title: 'Delete this post?', description: 'This cannot be undone.', confirmText: 'Delete', destructive: true }))) return;
 
     const { error } = await supabase
       .from('posts')
