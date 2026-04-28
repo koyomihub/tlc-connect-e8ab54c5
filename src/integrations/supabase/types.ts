@@ -129,6 +129,27 @@ export type Database = {
         }
         Relationships: []
       }
+      group_last_seen: {
+        Row: {
+          group_id: string
+          id: string
+          last_seen_at: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          last_seen_at?: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          last_seen_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       group_members: {
         Row: {
           group_id: string
@@ -366,6 +387,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      org_last_seen: {
+        Row: {
+          id: string
+          last_seen_at: string
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          last_seen_at?: string
+          organization_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          last_seen_at?: string
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       organization_members: {
         Row: {
@@ -621,6 +663,7 @@ export type Database = {
           created_at: string | null
           display_name: string | null
           id: string
+          presence_preference: string
           token_balance: number | null
           updated_at: string | null
           wallet_address: string | null
@@ -633,6 +676,7 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           id: string
+          presence_preference?: string
           token_balance?: number | null
           updated_at?: string | null
           wallet_address?: string | null
@@ -645,6 +689,7 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           id?: string
+          presence_preference?: string
           token_balance?: number | null
           updated_at?: string | null
           wallet_address?: string | null
