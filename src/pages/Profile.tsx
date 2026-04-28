@@ -885,6 +885,13 @@ export default function Profile() {
           )}
         </DialogContent>
       </Dialog>
+
+      <AvatarCropDialog
+        open={!!pendingAvatarFile}
+        file={pendingAvatarFile}
+        onCancel={() => setPendingAvatarFile(null)}
+        onConfirm={handleAvatarCropConfirm}
+      />
     </MainLayout>
   );
 }
