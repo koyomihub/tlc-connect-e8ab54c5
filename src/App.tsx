@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { WalletProvider } from "@/contexts/WalletContext";
+import { PresenceProvider } from "@/contexts/PresenceContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Feed from "./pages/Feed";
@@ -50,6 +51,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
         <AuthProvider>
+          <PresenceProvider>
           <WalletProvider>
             <Routes>
               <Route path="/" element={<Index />} />
@@ -164,6 +166,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
             </Routes>
           </WalletProvider>
+          </PresenceProvider>
         </AuthProvider>
       </BrowserRouter>
       </TooltipProvider>
