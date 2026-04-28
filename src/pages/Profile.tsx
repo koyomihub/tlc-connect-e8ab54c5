@@ -5,6 +5,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { PresenceIndicator } from '@/components/PresenceIndicator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -557,6 +558,7 @@ export default function Profile() {
                     {profile?.display_name?.[0]?.toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
+                {profile?.id && <PresenceIndicator userId={profile.id} size="lg" asDot className="bottom-2 right-2" />}
                 {isOwnProfile && editing && (
                   <>
                     <button
@@ -702,15 +704,18 @@ export default function Profile() {
 
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-start gap-3 flex-1">
-                        <Avatar
-                          className="cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={() => navigate(`/profile/${post.user_id}`)}
-                        >
-                          <AvatarImage src={post.profiles?.avatar_url} />
-                          <AvatarFallback>
-                            {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
+                        <span className="relative inline-block shrink-0">
+                          <Avatar
+                            className="cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => navigate(`/profile/${post.user_id}`)}
+                          >
+                            <AvatarImage src={post.profiles?.avatar_url} />
+                            <AvatarFallback>
+                              {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <PresenceIndicator userId={post.user_id} asDot />
+                        </span>
                         <div className="space-y-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <p

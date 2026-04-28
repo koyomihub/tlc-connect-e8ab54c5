@@ -347,12 +347,15 @@ export default function OrganizationDetail() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-3 flex-1">
-                      <Avatar>
-                        <AvatarImage src={post.profiles?.avatar_url} />
-                        <AvatarFallback>
-                          {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
+                      <span className="relative inline-block shrink-0">
+                        <Avatar>
+                          <AvatarImage src={post.profiles?.avatar_url} />
+                          <AvatarFallback>
+                            {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <PresenceIndicator userId={post.user_id} asDot />
+                      </span>
                       <div className="flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="font-semibold">{post.profiles?.display_name}</p>

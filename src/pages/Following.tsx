@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { PresenceIndicator } from '@/components/PresenceIndicator';
 import { toast } from '@/hooks/use-toast';
 import { UserPlus, UserMinus, Search } from 'lucide-react';
 
@@ -136,12 +137,15 @@ export default function Following() {
               <Card key={profile.id} className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-4 flex-1">
-                    <Avatar className="h-16 w-16">
-                      <AvatarImage src={profile.avatar_url} />
-                      <AvatarFallback>
-                        {profile.display_name?.[0]?.toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
+                    <span className="relative inline-block shrink-0">
+                      <Avatar className="h-16 w-16">
+                        <AvatarImage src={profile.avatar_url} />
+                        <AvatarFallback>
+                          {profile.display_name?.[0]?.toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <PresenceIndicator userId={profile.id} size="md" asDot />
+                    </span>
                     <div className="flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <h3 className="font-semibold text-lg">{profile.display_name || 'Anonymous'}</h3>
