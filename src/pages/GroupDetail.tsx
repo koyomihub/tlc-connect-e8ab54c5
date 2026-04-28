@@ -13,6 +13,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { awardTokens } from '@/lib/awardTokens';
 import { useAuth } from '@/contexts/AuthContext';
+import { useConfirm } from '@/contexts/ConfirmContext';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -34,6 +35,7 @@ export default function GroupDetail() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
+  const confirm = useConfirm();
   const isSiteAdmin = useIsAdmin();
   const { markAsRead: markGroupRead } = useUnreadGroups();
   const [group, setGroup] = useState<any>(null);
@@ -367,6 +369,7 @@ export default function GroupDetail() {
   };
 
   const leaveGroup = async () => {
+    if (!(await confirm({ title: 'Leave this group?', description: 'You will need to rejoin to access it again.', confirmText: 'Leave Group', destructive: true }))) return;
     const { error } = await supabase
       .from('group_members').delete()
       .eq('group_id', id).eq('user_id', user?.id);
@@ -428,6 +431,7 @@ export default function GroupDetail() {
   };
 
   const deleteMessage = async (messageId: string) => {
+    if (!(await confirm({ title: 'Delete this message?', description: 'This cannot be undone.', confirmText: 'Delete', destructive: true }))) return;
     const { error } = await supabase.from('group_messages').delete().eq('id', messageId);
     if (!error) toast({ title: 'Message deleted' });
   };
