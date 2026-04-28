@@ -609,10 +609,13 @@ export default function GroupDetail() {
                         return (
                       <div key={p.id} className="flex items-center justify-between p-2 rounded hover:bg-accent">
                         <div className="flex items-center space-x-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={p.avatar_url} />
-                            <AvatarFallback>{p.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-                          </Avatar>
+                          <span className="relative inline-block shrink-0">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={p.avatar_url} />
+                              <AvatarFallback>{p.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <PresenceIndicator userId={p.id} asDot />
+                          </span>
                           <span className="text-sm">{p.display_name}</span>
                         </div>
                          <Button size="sm" variant={alreadyInvited ? 'outline' : 'default'} disabled={alreadyInvited} onClick={() => sendInvite(p.id)}>
