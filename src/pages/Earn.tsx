@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
 import { toast } from '@/hooks/use-toast';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 const DAILY_LIMIT = 100;
 const POST_DAILY_CAP = 3;
