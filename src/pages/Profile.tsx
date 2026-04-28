@@ -412,24 +412,42 @@ export default function Profile() {
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'cover') => {
     if (!isOwnProfile) return;
     const file = event.target.files?.[0];
+    // Reset input so re-selecting the same file still triggers onChange
+    event.target.value = '';
     if (!file) return;
+
+    // Avatars go through the crop/reposition dialog
+    if (type === 'avatar') {
+      setPendingAvatarFile(file);
+      return;
+    }
+
+    await uploadProfileFile(file, file.name.split('.').pop() || 'jpg', type);
+  };
+
+  const uploadProfileFile = async (
+    data: Blob,
+    ext: string,
+    type: 'avatar' | 'cover',
+  ) => {
     setLoading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}-${type}-${Math.random()}.${fileExt}`;
+      const fileName = `${user?.id}-${type}-${Math.random()}.${ext}`;
       const filePath = `${user?.id}/${type}s/${fileName}`;
       const { error: uploadError } = await supabase.storage
         .from('profiles')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, data, { upsert: true, contentType: data.type || undefined });
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from('profiles').getPublicUrl(filePath);
       const updateField = type === 'avatar' ? 'avatar_url' : 'cover_photo_url';
+      // Cache-bust so the new image shows immediately even if URL is reused
+      const bustedUrl = `${publicUrl}?t=${Date.now()}`;
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ [updateField]: publicUrl })
+        .update({ [updateField]: bustedUrl })
         .eq('id', user?.id);
       if (updateError) throw updateError;
-      setProfile((prev: any) => ({ ...prev, [updateField]: publicUrl }));
+      setProfile((prev: any) => ({ ...prev, [updateField]: bustedUrl }));
       toast({ title: 'Upload successful!', description: `Your ${type} has been updated` });
     } catch (error: any) {
       toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
@@ -437,6 +455,12 @@ export default function Profile() {
       setLoading(false);
     }
   };
+
+  const handleAvatarCropConfirm = async (blob: Blob) => {
+    setPendingAvatarFile(null);
+    await uploadProfileFile(blob, 'jpg', 'avatar');
+  };
+
 
   const updateProfile = async () => {
     setLoading(true);
