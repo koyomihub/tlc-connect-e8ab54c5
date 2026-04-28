@@ -64,6 +64,17 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   const isActive = (path: string) => location.pathname === path;
   const [menuOpen, setMenuOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+
+  const requestLogout = () => {
+    setMenuOpen(false);
+    setLogoutOpen(true);
+  };
+
+  const confirmLogout = () => {
+    setLogoutOpen(false);
+    signOut();
+  };
 
   const handleNav = (path: string) => {
     setMenuOpen(false);
