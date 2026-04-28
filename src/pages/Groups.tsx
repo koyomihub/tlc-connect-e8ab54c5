@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Users, Plus, Search, Lock, Globe } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUnreadGroups } from '@/hooks/useUnreadGroups';
 import { toast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -38,6 +39,7 @@ const GroupAvatar = ({ group }: { group: any }) => {
 
 export default function Groups() {
   const { user } = useAuth();
+  const { unreadGroupIds } = useUnreadGroups();
   const navigate = useNavigate();
   const [publicGroups, setPublicGroups] = useState<any[]>([]);
   const [privateGroups, setPrivateGroups] = useState<any[]>([]);
@@ -224,9 +226,16 @@ export default function Groups() {
     const isMember = memberGroupIds.has(group.id);
     const hasPending = pendingRequests.has(group.id);
     const isPrivate = group.privacy === 'private';
+    const hasUnread = isMember && unreadGroupIds.has(group.id);
 
     const card = (
-      <Card className="hover:shadow-lg transition-all h-full overflow-hidden flex flex-col">
+      <Card className="hover:shadow-lg transition-all h-full overflow-hidden flex flex-col relative">
+        {hasUnread && (
+          <span
+            className="absolute top-2 right-2 z-10 h-3 w-3 rounded-full bg-destructive ring-2 ring-card shadow-md"
+            title="New messages"
+          />
+        )}
         <div className="h-28 w-full bg-muted overflow-hidden flex-shrink-0">
           {group.image_url ? (
             <img src={group.image_url} alt={group.name} className="w-full h-full object-cover" />
