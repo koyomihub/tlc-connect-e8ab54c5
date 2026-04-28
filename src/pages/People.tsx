@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { RoleBadge } from '@/components/RoleBadge';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

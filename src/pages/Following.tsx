@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { RoleBadge } from '@/components/RoleBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';

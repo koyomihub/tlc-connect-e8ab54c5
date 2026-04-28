@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { RoleBadge } from '@/components/RoleBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy } from 'lucide-react';

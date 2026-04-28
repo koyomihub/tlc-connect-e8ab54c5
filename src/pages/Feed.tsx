@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { RoleBadge } from '@/components/RoleBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
