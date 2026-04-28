@@ -239,6 +239,21 @@ export function MainLayout({ children }: MainLayoutProps) {
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-24 lg:pb-6 max-w-7xl">
         {children}
       </main>
+
+      <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign out of TLC Connect?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You'll need to sign in again to access your account. Are you sure you want to sign out?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLogout}>Sign out</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
