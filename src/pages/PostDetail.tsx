@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { PresenceIndicator } from '@/components/PresenceIndicator';
 import { toast } from '@/hooks/use-toast';
 import { Heart, MessageCircle, ArrowLeft, Trash2, Reply } from 'lucide-react';
 import { awardTokens } from '@/lib/awardTokens';
@@ -296,12 +297,15 @@ export default function PostDetail() {
               className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
               onClick={() => navigate(`/profile/${post.user_id}`)}
             >
-              <Avatar>
-                <AvatarImage src={post.profiles?.avatar_url} />
-                <AvatarFallback>
-                  {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
+              <span className="relative inline-block shrink-0">
+                <Avatar>
+                  <AvatarImage src={post.profiles?.avatar_url} />
+                  <AvatarFallback>
+                    {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <PresenceIndicator userId={post.user_id} asDot />
+              </span>
               <div>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <p className="font-semibold">{post.profiles?.display_name}</p>
@@ -377,15 +381,18 @@ export default function PostDetail() {
           <div className="space-y-4">
             {comments.map((comment) => (
               <div key={comment.id} className="flex items-start space-x-3 p-4 bg-accent/50 rounded-lg">
-                <Avatar 
-                  className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => navigate(`/profile/${comment.user_id}`)}
-                >
-                  <AvatarImage src={comment.profiles?.avatar_url} />
-                  <AvatarFallback>
-                    {comment.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
+                <span className="relative inline-block shrink-0">
+                  <Avatar
+                    className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => navigate(`/profile/${comment.user_id}`)}
+                  >
+                    <AvatarImage src={comment.profiles?.avatar_url} />
+                    <AvatarFallback>
+                      {comment.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <PresenceIndicator userId={comment.user_id} asDot />
+                </span>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <div>

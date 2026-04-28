@@ -29,6 +29,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
+import { useUnreadOrgs } from '@/hooks/useUnreadOrgs';
+import { PresenceIndicator } from '@/components/PresenceIndicator';
 
 export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>();
@@ -52,12 +54,19 @@ export default function OrganizationDetail() {
   const [editForm, setEditForm] = useState({ title: '', content: '' });
   const [editSaving, setEditSaving] = useState(false);
 
+  const { markAsRead: markOrgRead } = useUnreadOrgs();
+
   useEffect(() => {
     if (id) {
       fetchOrganization();
       fetchPosts();
     }
   }, [id]);
+
+  // Mark org as read whenever we visit / new post arrives while viewing
+  useEffect(() => {
+    if (id) markOrgRead(id);
+  }, [id, posts.length, markOrgRead]);
 
   useEffect(() => {
     if (user && id) checkPermissions();
@@ -339,12 +348,15 @@ export default function OrganizationDetail() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-3 flex-1">
-                      <Avatar>
-                        <AvatarImage src={post.profiles?.avatar_url} />
-                        <AvatarFallback>
-                          {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
+                      <span className="relative inline-block shrink-0">
+                        <Avatar>
+                          <AvatarImage src={post.profiles?.avatar_url} />
+                          <AvatarFallback>
+                            {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <PresenceIndicator userId={post.user_id} asDot />
+                      </span>
                       <div className="flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="font-semibold">{post.profiles?.display_name}</p>

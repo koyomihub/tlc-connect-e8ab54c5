@@ -5,6 +5,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { PresenceIndicator } from '@/components/PresenceIndicator';
 import { Input } from '@/components/ui/input';
 import {
   ArrowLeft, Send, Users, Edit, Trash2, Crown, Camera, UserPlus, Lock, Globe, Check, X, Inbox, UserMinus, Shield,
@@ -26,6 +27,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useUnreadGroups } from '@/hooks/useUnreadGroups';
 
 export default function GroupDetail() {
   const { id } = useParams();
@@ -33,6 +35,7 @@ export default function GroupDetail() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const isSiteAdmin = useIsAdmin();
+  const { markAsRead: markGroupRead } = useUnreadGroups();
   const [group, setGroup] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -82,6 +85,13 @@ export default function GroupDetail() {
       return () => { supabase.removeChannel(channel); };
     }
   }, [isMember]);
+
+  // Mark as read whenever we view the group as a member or when new messages arrive
+  useEffect(() => {
+    if (isMember && id) {
+      markGroupRead(id);
+    }
+  }, [isMember, id, messages.length, markGroupRead]);
 
   useEffect(() => {
     if (isAdmin && id) fetchJoinRequests();
@@ -968,10 +978,13 @@ export default function GroupDetail() {
                   return (
                     <div key={m.user_id} className="flex items-center justify-between p-2 rounded hover:bg-accent/50">
                       <div className="flex items-center space-x-3">
-                        <Avatar className="h-9 w-9">
-                          <AvatarImage src={m.profiles?.avatar_url} />
-                          <AvatarFallback>{m.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-                        </Avatar>
+                        <span className="relative inline-block shrink-0">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={m.profiles?.avatar_url} />
+                            <AvatarFallback>{m.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                          </Avatar>
+                          <PresenceIndicator userId={m.user_id} asDot />
+                        </span>
                         <div>
                           <p className="text-sm font-medium flex items-center gap-1.5 flex-wrap">
                             {m.profiles?.display_name || 'Unknown'}
@@ -1098,10 +1111,13 @@ export default function GroupDetail() {
                     return (
                       <div key={msg.id} className={`flex items-start gap-2 w-full ${isOwn ? 'justify-end' : 'justify-start'}`}>
                         {!isOwn && (
-                          <Avatar className="h-8 w-8 shrink-0">
-                            <AvatarImage src={msg.profiles?.avatar_url} />
-                            <AvatarFallback>{msg.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-                          </Avatar>
+                          <span className="relative inline-block shrink-0">
+                            <Avatar className="h-8 w-8 shrink-0">
+                              <AvatarImage src={msg.profiles?.avatar_url} />
+                              <AvatarFallback>{msg.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <PresenceIndicator userId={msg.user_id} asDot />
+                          </span>
                         )}
                         <div className={`flex flex-col min-w-0 ${isOwn ? 'items-end' : 'items-start'} max-w-[80%] sm:max-w-[70%]`}>
                           {!isOwn && (
@@ -1127,10 +1143,13 @@ export default function GroupDetail() {
                           </div>
                         </div>
                         {isOwn && (
-                          <Avatar className="h-8 w-8 shrink-0">
-                            <AvatarImage src={msg.profiles?.avatar_url} />
-                            <AvatarFallback>{msg.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-                          </Avatar>
+                          <span className="relative inline-block shrink-0">
+                            <Avatar className="h-8 w-8 shrink-0">
+                              <AvatarImage src={msg.profiles?.avatar_url} />
+                              <AvatarFallback>{msg.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <PresenceIndicator userId={msg.user_id} asDot />
+                          </span>
                         )}
                       </div>
                     );

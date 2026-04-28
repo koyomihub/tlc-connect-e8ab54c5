@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { PresenceIndicator } from '@/components/PresenceIndicator';
 import { toast } from '@/hooks/use-toast';
 import { Heart, MessageCircle, Send, Image as ImageIcon, X, Repeat2, Newspaper, Globe, Users as UsersIcon, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -448,12 +449,15 @@ export default function Feed() {
         </div>
         <Card className="p-6 mb-6">
           <div className="flex items-start space-x-3">
-            <Avatar>
-              <AvatarImage src={userProfile?.avatar_url} />
-              <AvatarFallback>
-                {userProfile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
+            <span className="relative inline-block shrink-0">
+              <Avatar>
+                <AvatarImage src={userProfile?.avatar_url} />
+                <AvatarFallback>
+                  {userProfile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <PresenceIndicator userId={user?.id} asDot />
+            </span>
             <div className="flex-1 space-y-3">
               <Textarea
                 placeholder="What's on your mind?"
@@ -587,15 +591,18 @@ export default function Feed() {
 
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start space-x-3 flex-1">
-                    <Avatar
-                      className="cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => navigate(`/profile/${post.user_id}`)}
-                    >
-                      <AvatarImage src={post.profiles?.avatar_url} />
-                      <AvatarFallback>
-                        {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
+                    <span className="relative inline-block shrink-0">
+                      <Avatar
+                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => navigate(`/profile/${post.user_id}`)}
+                      >
+                        <AvatarImage src={post.profiles?.avatar_url} />
+                        <AvatarFallback>
+                          {post.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <PresenceIndicator userId={post.user_id} asDot />
+                    </span>
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <p

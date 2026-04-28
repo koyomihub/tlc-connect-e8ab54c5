@@ -6,6 +6,9 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useUnreadGroups } from '@/hooks/useUnreadGroups';
+import { useUnreadOrgs } from '@/hooks/useUnreadOrgs';
+import { usePresence, type PresencePreference } from '@/contexts/PresenceContext';
 import {
   Sheet,
   SheetContent,
@@ -24,8 +27,17 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Home,
-  MessageSquare,
   Users,
   Coins,
   Gift,
@@ -35,17 +47,30 @@ import {
   Shield,
   UserPlus,
   Menu,
+  Circle,
+  Moon,
+  EyeOff,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface MainLayoutProps {
   children: ReactNode;
 }
+
+const PRESENCE_OPTIONS: { value: PresencePreference; label: string; description: string; dotClass: string }[] = [
+  { value: 'auto', label: 'Active', description: 'Auto online when active, idle after 5 min', dotClass: 'bg-emerald-500' },
+  { value: 'idle', label: 'Idle', description: "Always show as idle, even when active", dotClass: 'bg-amber-400' },
+  { value: 'invisible', label: 'Invisible', description: 'Appear offline to everyone', dotClass: 'bg-muted-foreground/40' },
+];
 
 export function MainLayout({ children }: MainLayoutProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
+  const { unreadGroupIds } = useUnreadGroups();
+  const { unreadOrgIds } = useUnreadOrgs();
+  const { preference, setPreference, myStatus } = usePresence();
 
   useEffect(() => {
     if (!user) { setIsAdmin(false); return; }
@@ -53,13 +78,16 @@ export function MainLayout({ children }: MainLayoutProps) {
       .then(({ data }) => setIsAdmin(!!data));
   }, [user]);
 
+  const hasUnreadGroups = unreadGroupIds.size > 0;
+  const hasUnreadOrgs = unreadOrgIds.size > 0;
+
   const menuItems = [
-    { path: '/feed', label: 'Feed', icon: Home },
-    { path: '/groups', label: 'Groups', icon: Users },
-    { path: '/people', label: 'People', icon: UserPlus },
-    { path: '/earn', label: 'Earn', icon: Coins },
-    { path: '/nfts', label: 'NFTs', icon: Gift },
-    { path: '/organizations', label: 'Organizations', icon: Building2 },
+    { path: '/feed', label: 'Feed', icon: Home, dot: false },
+    { path: '/groups', label: 'Groups', icon: Users, dot: hasUnreadGroups },
+    { path: '/people', label: 'People', icon: UserPlus, dot: false },
+    { path: '/earn', label: 'Earn', icon: Coins, dot: false },
+    { path: '/nfts', label: 'NFTs', icon: Gift, dot: false },
+    { path: '/organizations', label: 'Organizations', icon: Building2, dot: hasUnreadOrgs },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -80,6 +108,13 @@ export function MainLayout({ children }: MainLayoutProps) {
     setMenuOpen(false);
     navigate(path);
   };
+
+  const presenceDotClass =
+    myStatus === 'online' ? 'bg-emerald-500'
+    : myStatus === 'idle' ? 'bg-amber-400'
+    : 'bg-muted-foreground/40';
+
+  const presenceLabel = myStatus === 'online' ? 'Active' : myStatus === 'idle' ? 'Idle' : 'Invisible';
 
   return (
     <div className="min-h-screen bg-background">
@@ -110,9 +145,13 @@ export function MainLayout({ children }: MainLayoutProps) {
                   variant={active ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => navigate(item.path)}
+                  className="relative"
                 >
                   <Icon className="h-4 w-4 mr-2" />
                   {item.label}
+                  {item.dot && (
+                    <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive ring-2 ring-card" />
+                  )}
                 </Button>
               );
             })}
@@ -121,6 +160,32 @@ export function MainLayout({ children }: MainLayoutProps) {
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <NotificationBell />
             <ThemeToggle />
+
+            {/* Presence selector */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative" aria-label={`Status: ${presenceLabel}`}>
+                  <Circle className={cn('h-4 w-4 fill-current', presenceDotClass.replace('bg-', 'text-'))} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Active Status</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup value={preference} onValueChange={(v) => setPreference(v as PresencePreference)}>
+                  {PRESENCE_OPTIONS.map((opt) => (
+                    <DropdownMenuRadioItem key={opt.value} value={opt.value} className="cursor-pointer">
+                      <div className="flex items-start gap-2 flex-1 ml-1">
+                        <span className={cn('mt-1.5 h-2.5 w-2.5 rounded-full shrink-0', opt.dotClass)} />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">{opt.label}</span>
+                          <span className="text-[11px] text-muted-foreground leading-tight">{opt.description}</span>
+                        </div>
+                      </div>
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {isAdmin && (
               <Button
@@ -154,8 +219,11 @@ export function MainLayout({ children }: MainLayoutProps) {
             {/* Mobile/tablet menu button (replaces overflow icons) */}
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="lg:hidden">
+                <Button variant="ghost" size="icon" className="lg:hidden relative">
                   <Menu className="h-5 w-5" />
+                  {(hasUnreadGroups || hasUnreadOrgs) && (
+                    <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive ring-2 ring-card" />
+                  )}
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[280px] sm:w-[320px] flex flex-col">
@@ -170,11 +238,14 @@ export function MainLayout({ children }: MainLayoutProps) {
                       <Button
                         key={item.path}
                         variant={active ? 'default' : 'ghost'}
-                        className="w-full justify-start"
+                        className="w-full justify-start relative"
                         onClick={() => handleNav(item.path)}
                       >
                         <Icon className="h-4 w-4 mr-2" />
                         {item.label}
+                        {item.dot && (
+                          <span className="ml-auto h-2 w-2 rounded-full bg-destructive" />
+                        )}
                       </Button>
                     );
                   })}
@@ -223,13 +294,16 @@ export function MainLayout({ children }: MainLayoutProps) {
                 key={item.path}
                 variant="ghost"
                 size="sm"
-                className={`flex flex-col items-center justify-center gap-0.5 h-14 min-w-[60px] px-2 shrink-0 ${
+                className={`relative flex flex-col items-center justify-center gap-0.5 h-14 min-w-[60px] px-2 shrink-0 ${
                   active ? 'text-primary' : 'text-muted-foreground'
                 }`}
                 onClick={() => navigate(item.path)}
               >
                 <Icon className="h-5 w-5" />
                 <span className="text-[10px] leading-tight">{item.label}</span>
+                {item.dot && (
+                  <span className="absolute top-1 right-3 h-2 w-2 rounded-full bg-destructive ring-2 ring-card" />
+                )}
               </Button>
             );
           })}

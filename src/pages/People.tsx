@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { PresenceIndicator } from '@/components/PresenceIndicator';
 import { Search, UserPlus, UserMinus, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -163,12 +164,15 @@ export default function People() {
                       className="flex items-center space-x-3 flex-1 cursor-pointer"
                       onClick={() => navigate(`/profile/${profile.id}`)}
                     >
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={profile.avatar_url} />
-                        <AvatarFallback>
-                          {profile.display_name?.[0]?.toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
+                      <span className="relative inline-block shrink-0">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={profile.avatar_url} />
+                          <AvatarFallback>
+                            {profile.display_name?.[0]?.toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <PresenceIndicator userId={profile.id} size="md" asDot />
+                      </span>
                       <div>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <h3 className="font-semibold hover:text-primary transition-colors">

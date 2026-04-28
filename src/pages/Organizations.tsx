@@ -4,10 +4,12 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useUnreadOrgs } from '@/hooks/useUnreadOrgs';
 
 export default function Organizations() {
   const navigate = useNavigate();
   const [organizations, setOrganizations] = useState<any[]>([]);
+  const { unreadOrgIds } = useUnreadOrgs();
 
   useEffect(() => {
     fetchOrganizations();
@@ -35,34 +37,43 @@ export default function Organizations() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
-          {organizations.map((org) => (
-            <button
-              key={org.id}
-              type="button"
-              onClick={() => navigate(`/organizations/${org.id}`)}
-              className="text-left"
-            >
-              <Card className="hover:shadow-md transition-shadow cursor-pointer hover:border-primary/50 h-full">
-                <CardHeader>
-                  <div className="flex items-center space-x-3">
-                    {org.logo_url ? (
-                      <img src={org.logo_url} alt={org.name} className="h-12 w-12 rounded-full" />
-                    ) : (
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Building2 className="h-6 w-6 text-primary" />
-                      </div>
-                    )}
-                    <div>
-                      <CardTitle className="text-lg">{org.name}</CardTitle>
-                      {org.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">{org.description}</p>
+          {organizations.map((org) => {
+            const hasUnread = unreadOrgIds.has(org.id);
+            return (
+              <button
+                key={org.id}
+                type="button"
+                onClick={() => navigate(`/organizations/${org.id}`)}
+                className="text-left"
+              >
+                <Card className="hover:shadow-md transition-shadow cursor-pointer hover:border-primary/50 h-full relative">
+                  {hasUnread && (
+                    <span
+                      className="absolute top-2 right-2 z-10 h-3 w-3 rounded-full bg-destructive ring-2 ring-card shadow-md"
+                      title="New post"
+                    />
+                  )}
+                  <CardHeader>
+                    <div className="flex items-center space-x-3">
+                      {org.logo_url ? (
+                        <img src={org.logo_url} alt={org.name} className="h-12 w-12 rounded-full" />
+                      ) : (
+                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Building2 className="h-6 w-6 text-primary" />
+                        </div>
                       )}
+                      <div>
+                        <CardTitle className="text-lg">{org.name}</CardTitle>
+                        {org.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">{org.description}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
-              </Card>
-            </button>
-          ))}
+                  </CardHeader>
+                </Card>
+              </button>
+            );
+          })}
         </div>
       </div>
     </MainLayout>

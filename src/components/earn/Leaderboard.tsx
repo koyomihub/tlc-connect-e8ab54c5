@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { RoleBadge } from '@/components/RoleBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { PresenceIndicator } from '@/components/PresenceIndicator';
 import { Trophy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -72,10 +73,13 @@ export function Leaderboard() {
                 <span className={`text-lg font-bold w-8 text-center ${i < 3 ? medalColors[i] : 'text-muted-foreground'}`}>
                   #{i + 1}
                 </span>
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={entry.avatar_url || undefined} />
-                  <AvatarFallback>{(entry.display_name || '?')[0].toUpperCase()}</AvatarFallback>
-                </Avatar>
+                <span className="relative inline-block shrink-0">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={entry.avatar_url || undefined} />
+                    <AvatarFallback>{(entry.display_name || '?')[0].toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <PresenceIndicator userId={entry.id} asDot />
+                </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <p className="text-sm font-medium truncate">{entry.display_name || 'Anonymous'}</p>
