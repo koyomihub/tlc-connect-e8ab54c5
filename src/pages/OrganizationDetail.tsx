@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
 import { useUnreadOrgs } from '@/hooks/useUnreadOrgs';
+import { PresenceIndicator } from '@/components/PresenceIndicator';
 
 export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>();
