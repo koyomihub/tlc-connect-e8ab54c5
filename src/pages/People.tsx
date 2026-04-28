@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { RoleBadge } from '@/components/RoleBadge';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -169,9 +170,12 @@ export default function People() {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <h3 className="font-semibold hover:text-primary transition-colors">
-                          {profile.display_name}
-                        </h3>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h3 className="font-semibold hover:text-primary transition-colors">
+                            {profile.display_name}
+                          </h3>
+                          <RoleBadge userId={profile.id} />
+                        </div>
                         {profile.bio && (
                           <p className="text-sm text-muted-foreground line-clamp-1">
                             {profile.bio}

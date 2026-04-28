@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { RoleBadge } from '@/components/RoleBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy } from 'lucide-react';
@@ -76,7 +77,10 @@ export function Leaderboard() {
                   <AvatarFallback>{(entry.display_name || '?')[0].toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{entry.display_name || 'Anonymous'}</p>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <p className="text-sm font-medium truncate">{entry.display_name || 'Anonymous'}</p>
+                    <RoleBadge userId={entry.id} />
+                  </div>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold">{entry.total_earned.toLocaleString()}</p>
