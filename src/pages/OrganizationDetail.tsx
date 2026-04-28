@@ -31,11 +31,13 @@ import {
 import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
 import { useUnreadOrgs } from '@/hooks/useUnreadOrgs';
 import { PresenceIndicator } from '@/components/PresenceIndicator';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [organization, setOrganization] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [canPost, setCanPost] = useState(false);
@@ -194,7 +196,7 @@ export default function OrganizationDetail() {
 
   // ---------- Delete ----------
   const deletePost = async (postId: string) => {
-    if (!confirm('Delete this post?')) return;
+    if (!(await confirm({ title: 'Delete this post?', description: 'This cannot be undone.', confirmText: 'Delete', destructive: true }))) return;
     const { error } = await supabase.from('organization_posts').delete().eq('id', postId);
     if (error) {
       toast({ title: 'Error deleting post', description: error.message, variant: 'destructive' });

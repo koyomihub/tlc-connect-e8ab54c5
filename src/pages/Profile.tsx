@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PresenceIndicator } from '@/components/PresenceIndicator';
+import { useConfirm } from '@/contexts/ConfirmContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -61,6 +62,7 @@ interface ActivityItem {
 
 export default function Profile() {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const isAdmin = useIsAdmin();
   const { userId } = useParams<{ userId?: string }>();
   const navigate = useNavigate();
@@ -406,7 +408,7 @@ export default function Profile() {
   };
 
   const deletePost = async (postId: string) => {
-    if (!confirm('Delete this post? This cannot be undone.')) return;
+    if (!(await confirm({ title: 'Delete this post?', description: 'This cannot be undone.', confirmText: 'Delete', destructive: true }))) return;
     const { error } = await supabase.from('posts').delete().eq('id', postId);
     if (error) {
       toast({ title: 'Error deleting post', description: error.message, variant: 'destructive' });

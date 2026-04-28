@@ -13,6 +13,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { awardTokens } from '@/lib/awardTokens';
 import { useAuth } from '@/contexts/AuthContext';
+import { useConfirm } from '@/contexts/ConfirmContext';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -34,6 +35,7 @@ export default function GroupDetail() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
+  const confirm = useConfirm();
   const isSiteAdmin = useIsAdmin();
   const { markAsRead: markGroupRead } = useUnreadGroups();
   const [group, setGroup] = useState<any>(null);
@@ -367,6 +369,7 @@ export default function GroupDetail() {
   };
 
   const leaveGroup = async () => {
+    if (!(await confirm({ title: 'Leave this group?', description: 'You will need to rejoin to access it again.', confirmText: 'Leave Group', destructive: true }))) return;
     const { error } = await supabase
       .from('group_members').delete()
       .eq('group_id', id).eq('user_id', user?.id);
@@ -428,6 +431,7 @@ export default function GroupDetail() {
   };
 
   const deleteMessage = async (messageId: string) => {
+    if (!(await confirm({ title: 'Delete this message?', description: 'This cannot be undone.', confirmText: 'Delete', destructive: true }))) return;
     const { error } = await supabase.from('group_messages').delete().eq('id', messageId);
     if (!error) toast({ title: 'Message deleted' });
   };
@@ -609,10 +613,13 @@ export default function GroupDetail() {
                         return (
                       <div key={p.id} className="flex items-center justify-between p-2 rounded hover:bg-accent">
                         <div className="flex items-center space-x-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={p.avatar_url} />
-                            <AvatarFallback>{p.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-                          </Avatar>
+                          <span className="relative inline-block shrink-0">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={p.avatar_url} />
+                              <AvatarFallback>{p.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <PresenceIndicator userId={p.id} asDot />
+                          </span>
                           <span className="text-sm">{p.display_name}</span>
                         </div>
                          <Button size="sm" variant={alreadyInvited ? 'outline' : 'default'} disabled={alreadyInvited} onClick={() => sendInvite(p.id)}>
@@ -663,10 +670,13 @@ export default function GroupDetail() {
                       joinRequests.map((req) => (
                         <div key={req.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/40">
                           <div className="flex items-center space-x-3">
-                            <Avatar className="h-9 w-9">
-                              <AvatarImage src={req.profiles?.avatar_url} />
-                              <AvatarFallback>{req.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-                            </Avatar>
+                            <span className="relative inline-block shrink-0">
+                              <Avatar className="h-9 w-9">
+                                <AvatarImage src={req.profiles?.avatar_url} />
+                                <AvatarFallback>{req.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                              </Avatar>
+                              <PresenceIndicator userId={req.user_id} asDot />
+                            </span>
                             <div>
                               <p className="text-sm font-medium">{req.profiles?.display_name || 'Unknown'}</p>
                               <p className="text-xs text-muted-foreground">
@@ -1049,10 +1059,13 @@ export default function GroupDetail() {
               {pendingInvitations.map((inv) => (
                 <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/40">
                   <div className="flex items-center space-x-3">
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={inv.inviter?.avatar_url} />
-                      <AvatarFallback>{inv.inviter?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-                    </Avatar>
+                    <span className="relative inline-block shrink-0">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={inv.inviter?.avatar_url} />
+                        <AvatarFallback>{inv.inviter?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                      </Avatar>
+                      <PresenceIndicator userId={inv.inviter_id} asDot />
+                    </span>
                     <p className="text-sm">
                       <span className="font-medium">{inv.inviter?.display_name || 'Someone'}</span> invited you to join this group
                     </p>
