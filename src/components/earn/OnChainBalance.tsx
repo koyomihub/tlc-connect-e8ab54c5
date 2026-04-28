@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { Coins, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWallet } from '@/contexts/WalletContext';
-
-const TLC_CONTRACT = '0xf95368bF95bAB7E83447E249B6C7e53B3bb858b0';
-const ERC20_BALANCE_ABI = ['function balanceOf(address) view returns (uint256)'];
+import { readTlcBalance } from '@/lib/onChainBalance';
 
 export function OnChainBalance() {
   const { account } = useWallet();
@@ -12,21 +10,11 @@ export function OnChainBalance() {
   const [loading, setLoading] = useState(false);
 
   const fetchOnChainBalance = async () => {
-    if (!account || !window.ethereum) return;
-
+    if (!account) return;
     setLoading(true);
-    try {
-      const { ethers } = await import('ethers');
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const contract = new ethers.Contract(TLC_CONTRACT, ERC20_BALANCE_ABI, provider);
-      const balance = await contract.balanceOf(account);
-      setOnChainBalance(ethers.formatUnits(balance, 18));
-    } catch (e) {
-      console.error('Error fetching on-chain balance:', e);
-      setOnChainBalance(null);
-    } finally {
-      setLoading(false);
-    }
+    const bal = await readTlcBalance(account);
+    setOnChainBalance(bal);
+    setLoading(false);
   };
 
   useEffect(() => {

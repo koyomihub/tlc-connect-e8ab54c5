@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PresenceIndicator } from '@/components/PresenceIndicator';
+import { AvatarCropDialog } from '@/components/AvatarCropDialog';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +29,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
 import { toast } from '@/hooks/use-toast';
 import { ethers } from 'ethers';
+import { readTlcBalance } from '@/lib/onChainBalance';
 import { formatDistanceToNow } from 'date-fns';
 import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
 import { PostPrivacyBadge } from '@/components/feed/PostPrivacyBadge';
@@ -99,6 +101,7 @@ export default function Profile() {
   const coverRef = useRef<HTMLDivElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const draggingRef = useRef(false);
 
   // Edit/delete state for own posts
@@ -126,27 +129,14 @@ export default function Profile() {
   // Fetch live on-chain $TLC balance whenever the wallet account changes (own profile only)
   useEffect(() => {
     const fetchOnChain = async () => {
-      if (!isOwnProfile || !account || !window.ethereum) {
+      if (!isOwnProfile || !account) {
         setOnChainTLC(null);
         return;
       }
       setTlcLoading(true);
-      try {
-        const TLC_CONTRACT = '0xf95368bF95bAB7E83447E249B6C7e53B3bb858b0';
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const contract = new ethers.Contract(
-          TLC_CONTRACT,
-          ['function balanceOf(address) view returns (uint256)'],
-          provider,
-        );
-        const bal = await contract.balanceOf(account);
-        setOnChainTLC(ethers.formatUnits(bal, 18));
-      } catch (e) {
-        console.error('Error fetching on-chain TLC:', e);
-        setOnChainTLC(null);
-      } finally {
-        setTlcLoading(false);
-      }
+      const bal = await readTlcBalance(account);
+      setOnChainTLC(bal);
+      setTlcLoading(false);
     };
     fetchOnChain();
   }, [account, isOwnProfile]);
@@ -422,24 +412,42 @@ export default function Profile() {
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'cover') => {
     if (!isOwnProfile) return;
     const file = event.target.files?.[0];
+    // Reset input so re-selecting the same file still triggers onChange
+    event.target.value = '';
     if (!file) return;
+
+    // Avatars go through the crop/reposition dialog
+    if (type === 'avatar') {
+      setPendingAvatarFile(file);
+      return;
+    }
+
+    await uploadProfileFile(file, file.name.split('.').pop() || 'jpg', type);
+  };
+
+  const uploadProfileFile = async (
+    data: Blob,
+    ext: string,
+    type: 'avatar' | 'cover',
+  ) => {
     setLoading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}-${type}-${Math.random()}.${fileExt}`;
+      const fileName = `${user?.id}-${type}-${Math.random()}.${ext}`;
       const filePath = `${user?.id}/${type}s/${fileName}`;
       const { error: uploadError } = await supabase.storage
         .from('profiles')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, data, { upsert: true, contentType: data.type || undefined });
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from('profiles').getPublicUrl(filePath);
       const updateField = type === 'avatar' ? 'avatar_url' : 'cover_photo_url';
+      // Cache-bust so the new image shows immediately even if URL is reused
+      const bustedUrl = `${publicUrl}?t=${Date.now()}`;
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ [updateField]: publicUrl })
+        .update({ [updateField]: bustedUrl })
         .eq('id', user?.id);
       if (updateError) throw updateError;
-      setProfile((prev: any) => ({ ...prev, [updateField]: publicUrl }));
+      setProfile((prev: any) => ({ ...prev, [updateField]: bustedUrl }));
       toast({ title: 'Upload successful!', description: `Your ${type} has been updated` });
     } catch (error: any) {
       toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
@@ -447,6 +455,12 @@ export default function Profile() {
       setLoading(false);
     }
   };
+
+  const handleAvatarCropConfirm = async (blob: Blob) => {
+    setPendingAvatarFile(null);
+    await uploadProfileFile(blob, 'jpg', 'avatar');
+  };
+
 
   const updateProfile = async () => {
     setLoading(true);
@@ -871,6 +885,13 @@ export default function Profile() {
           )}
         </DialogContent>
       </Dialog>
+
+      <AvatarCropDialog
+        open={!!pendingAvatarFile}
+        file={pendingAvatarFile}
+        onCancel={() => setPendingAvatarFile(null)}
+        onConfirm={handleAvatarCropConfirm}
+      />
     </MainLayout>
   );
 }
