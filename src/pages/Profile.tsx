@@ -126,27 +126,14 @@ export default function Profile() {
   // Fetch live on-chain $TLC balance whenever the wallet account changes (own profile only)
   useEffect(() => {
     const fetchOnChain = async () => {
-      if (!isOwnProfile || !account || !window.ethereum) {
+      if (!isOwnProfile || !account) {
         setOnChainTLC(null);
         return;
       }
       setTlcLoading(true);
-      try {
-        const TLC_CONTRACT = '0xf95368bF95bAB7E83447E249B6C7e53B3bb858b0';
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const contract = new ethers.Contract(
-          TLC_CONTRACT,
-          ['function balanceOf(address) view returns (uint256)'],
-          provider,
-        );
-        const bal = await contract.balanceOf(account);
-        setOnChainTLC(ethers.formatUnits(bal, 18));
-      } catch (e) {
-        console.error('Error fetching on-chain TLC:', e);
-        setOnChainTLC(null);
-      } finally {
-        setTlcLoading(false);
-      }
+      const bal = await readTlcBalance(account);
+      setOnChainTLC(bal);
+      setTlcLoading(false);
     };
     fetchOnChain();
   }, [account, isOwnProfile]);

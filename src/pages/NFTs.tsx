@@ -98,20 +98,13 @@ export default function NFTs() {
 
   useEffect(() => {
     const fetchOnChain = async () => {
-      if (!account || !window.ethereum) {
+      if (!account) {
         setOnChainBalance(0);
         return;
       }
-      try {
-        const { ethers } = await import('ethers');
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const contract = new ethers.Contract(TLC_CONTRACT, ERC20_ABI, provider);
-        const bal = await contract.balanceOf(account);
-        setOnChainBalance(parseFloat(ethers.formatUnits(bal, 18)));
-      } catch (e) {
-        console.error('Error fetching on-chain $TLC balance:', e);
-        setOnChainBalance(0);
-      }
+      const { readTlcBalance } = await import('@/lib/onChainBalance');
+      const bal = await readTlcBalance(account);
+      setOnChainBalance(bal !== null ? parseFloat(bal) : 0);
     };
     fetchOnChain();
   }, [account]);
