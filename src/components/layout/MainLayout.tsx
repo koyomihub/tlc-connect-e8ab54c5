@@ -146,7 +146,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               variant="ghost"
               size="icon"
               className="hidden sm:inline-flex"
-              onClick={signOut}
+              onClick={requestLogout}
             >
               <LogOut className="h-5 w-5" />
             </Button>
@@ -200,10 +200,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <Button
                     variant="ghost"
                     className="w-full justify-start text-destructive hover:text-destructive"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      signOut();
-                    }}
+                    onClick={requestLogout}
                   >
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign out
