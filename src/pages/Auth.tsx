@@ -4,8 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -63,7 +62,7 @@ const SUFFIX_PATTERN = /^[A-Z][a-zA-Z]*\.?$|^(II|III|IV|V)$/;
 export default function Auth() {
   const { signIn } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
+  const [view, setView] = useState<'signin' | 'signup'>('signin');
 
   const [signInData, setSignInData] = useState({ emailLocal: '', password: '' });
   const [signUpData, setSignUpData] = useState({
@@ -198,7 +197,7 @@ export default function Auth() {
 
   const handleGoToSignIn = () => {
     setSuccessOpen(false);
-    setActiveTab('signin');
+    setView('signin');
     setSignInData({ emailLocal: signedUpEmailLocal, password: '' });
   };
 
@@ -208,158 +207,167 @@ export default function Auth() {
         <CardHeader className="space-y-1 text-center">
           <img src={logo} alt="TLC-Connect logo" className="w-20 h-20 mx-auto mb-4 rounded-2xl shadow-glow object-contain" />
           <CardTitle className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Welcome to TLC Connect
+            {view === 'signin' ? 'Welcome Back' : 'Create Your Account'}
           </CardTitle>
           <CardDescription>
-            Your school's social network powered by blockchain
+            {view === 'signin'
+              ? 'Sign in to continue to TLC Connect'
+              : 'Join your school’s social network powered by blockchain'}
           </CardDescription>
         </CardHeader>
 
         <CardContent>
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'signin' | 'signup')} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="signin" className="space-y-4 mt-4">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">School Email</Label>
-                  <div className="flex">
-                    <Input
-                      id="signin-email"
-                      type="text"
-                      placeholder="firstnamelastname"
-                      value={signInData.emailLocal}
-                      onChange={(e) => setSignInData({ ...signInData, emailLocal: e.target.value })}
-                      className="rounded-r-none placeholder:italic placeholder:text-muted-foreground/50"
-                      required
-                    />
-                    <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-input bg-muted text-sm text-muted-foreground whitespace-nowrap">
-                      {SCHOOL_DOMAIN}
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <PasswordInput
-                    id="signin-password"
-                    placeholder="Enter your password"
-                    value={signInData.password}
-                    onChange={(v) => setSignInData({ ...signInData, password: v })}
-                    required
-                    show={showSignInPw}
-                    onToggleShow={() => setShowSignInPw((s) => !s)}
-                  />
-                </div>
-                <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
-                  {isLoading ? 'Signing in...' : 'Sign In'}
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="signup" className="space-y-4 mt-4">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-first">First Name</Label>
-                    <Input
-                      id="signup-first"
-                      type="text"
-                      placeholder="Juan"
-                      value={signUpData.firstName}
-                      onChange={(e) => setSignUpData({ ...signUpData, firstName: e.target.value })}
-                      required
-                      className="placeholder:italic placeholder:text-muted-foreground/50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-last">Last Name</Label>
-                    <Input
-                      id="signup-last"
-                      type="text"
-                      placeholder="Dela Cruz"
-                      value={signUpData.lastName}
-                      onChange={(e) => setSignUpData({ ...signUpData, lastName: e.target.value })}
-                      required
-                      className="placeholder:italic placeholder:text-muted-foreground/50"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-suffix">Suffix <span className="text-muted-foreground text-xs">(optional)</span></Label>
+          {view === 'signin' ? (
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signin-email">School Email</Label>
+                <div className="flex">
                   <Input
-                    id="signup-suffix"
+                    id="signin-email"
                     type="text"
-                    placeholder="Jr., Sr., II, etc."
-                    value={signUpData.suffix}
-                    onChange={(e) => setSignUpData({ ...signUpData, suffix: e.target.value })}
+                    placeholder="firstnamelastname"
+                    value={signInData.emailLocal}
+                    onChange={(e) => setSignInData({ ...signInData, emailLocal: e.target.value })}
+                    className="rounded-r-none placeholder:italic placeholder:text-muted-foreground/50"
+                    required
+                  />
+                  <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-input bg-muted text-sm text-muted-foreground whitespace-nowrap">
+                    {SCHOOL_DOMAIN}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signin-password">Password</Label>
+                <PasswordInput
+                  id="signin-password"
+                  placeholder="Enter your password"
+                  value={signInData.password}
+                  onChange={(v) => setSignInData({ ...signInData, password: v })}
+                  required
+                  show={showSignInPw}
+                  onToggleShow={() => setShowSignInPw((s) => !s)}
+                />
+              </div>
+              <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
+                {isLoading ? 'Signing in...' : 'Sign In'}
+              </Button>
+
+              <p className="text-center text-sm text-muted-foreground pt-2">
+                Don’t have an account yet?{' '}
+                <button
+                  type="button"
+                  onClick={() => setView('signup')}
+                  className="font-semibold text-primary hover:underline"
+                >
+                  Sign Up Here!
+                </button>
+              </p>
+            </form>
+          ) : (
+            <form onSubmit={handleSignUp} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-first">First Name</Label>
+                  <Input
+                    id="signup-first"
+                    type="text"
+                    placeholder="Juan"
+                    value={signUpData.firstName}
+                    onChange={(e) => setSignUpData({ ...signUpData, firstName: e.target.value })}
+                    required
                     className="placeholder:italic placeholder:text-muted-foreground/50"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground -mt-2">
-                  Use your real name. Names cannot be changed later.
+                <div className="space-y-2">
+                  <Label htmlFor="signup-last">Last Name</Label>
+                  <Input
+                    id="signup-last"
+                    type="text"
+                    placeholder="Dela Cruz"
+                    value={signUpData.lastName}
+                    onChange={(e) => setSignUpData({ ...signUpData, lastName: e.target.value })}
+                    required
+                    className="placeholder:italic placeholder:text-muted-foreground/50"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-suffix">Suffix <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                <Input
+                  id="signup-suffix"
+                  type="text"
+                  placeholder="Jr., Sr., II, etc."
+                  value={signUpData.suffix}
+                  onChange={(e) => setSignUpData({ ...signUpData, suffix: e.target.value })}
+                  className="placeholder:italic placeholder:text-muted-foreground/50"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Use your real name. Names cannot be changed later.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="signup-email">School Email</Label>
+                <div className="flex">
+                  <Input
+                    id="signup-email"
+                    type="text"
+                    placeholder="firstnamelastname"
+                    value={signUpData.emailLocal}
+                    onChange={(e) => setSignUpData({ ...signUpData, emailLocal: e.target.value })}
+                    className="rounded-r-none placeholder:italic placeholder:text-muted-foreground/50"
+                    required
+                  />
+                  <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-input bg-muted text-sm text-muted-foreground whitespace-nowrap">
+                    {SCHOOL_DOMAIN}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Only verified Lewis College emails are accepted.
                 </p>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">School Email</Label>
-                  <div className="flex">
-                    <Input
-                      id="signup-email"
-                      type="text"
-                      placeholder="firstnamelastname"
-                      value={signUpData.emailLocal}
-                      onChange={(e) => setSignUpData({ ...signUpData, emailLocal: e.target.value })}
-                      className="rounded-r-none placeholder:italic placeholder:text-muted-foreground/50"
-                      required
-                    />
-                    <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-input bg-muted text-sm text-muted-foreground whitespace-nowrap">
-                      {SCHOOL_DOMAIN}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Only verified Lewis College emails are accepted.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <PasswordInput
-                    id="signup-password"
-                    placeholder="At least 8 characters"
-                    minLength={8}
-                    value={signUpData.password}
-                    onChange={(v) => setSignUpData({ ...signUpData, password: v })}
-                    required
-                    show={showSignUpPw}
-                    onToggleShow={() => setShowSignUpPw((s) => !s)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-confirm">Confirm Password</Label>
-                  <PasswordInput
-                    id="signup-confirm"
-                    placeholder="Re-enter your password"
-                    minLength={8}
-                    value={signUpData.confirmPassword}
-                    onChange={(v) => setSignUpData({ ...signUpData, confirmPassword: v })}
-                    required
-                    show={showSignUpConfirmPw}
-                    onToggleShow={() => setShowSignUpConfirmPw((s) => !s)}
-                  />
-                </div>
-                <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
-                  {isLoading ? 'Creating account...' : 'Create Account'}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-password">Password</Label>
+                <PasswordInput
+                  id="signup-password"
+                  placeholder="At least 8 characters"
+                  minLength={8}
+                  value={signUpData.password}
+                  onChange={(v) => setSignUpData({ ...signUpData, password: v })}
+                  required
+                  show={showSignUpPw}
+                  onToggleShow={() => setShowSignUpPw((s) => !s)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-confirm">Confirm Password</Label>
+                <PasswordInput
+                  id="signup-confirm"
+                  placeholder="Re-enter your password"
+                  minLength={8}
+                  value={signUpData.confirmPassword}
+                  onChange={(v) => setSignUpData({ ...signUpData, confirmPassword: v })}
+                  required
+                  show={showSignUpConfirmPw}
+                  onToggleShow={() => setShowSignUpConfirmPw((s) => !s)}
+                />
+              </div>
+              <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
+                {isLoading ? 'Creating account...' : 'Create Account'}
+              </Button>
 
-        <CardFooter className="text-center text-sm text-muted-foreground">
-          <p className="mx-auto">
-            By continuing, you agree to our Terms of Service and Privacy Policy
-          </p>
-        </CardFooter>
+              <p className="text-center text-sm text-muted-foreground pt-2">
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => setView('signin')}
+                  className="font-semibold text-primary hover:underline"
+                >
+                  Sign In Here!
+                </button>
+              </p>
+            </form>
+          )}
+        </CardContent>
       </Card>
 
       <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
