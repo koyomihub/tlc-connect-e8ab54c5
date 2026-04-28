@@ -28,6 +28,7 @@ interface TokenStats {
 export default function Earn() {
   const { user } = useAuth();
   const { account, connectWallet, disconnectWallet, claimTokens, connecting } = useWallet();
+  const confirm = useConfirm();
   const [stats, setStats] = useState<TokenStats>({ balance: 0, earnedToday: 0, totalEarned: 0, rank: 0 });
   const [postsToday, setPostsToday] = useState(0);
   const [claiming, setClaiming] = useState(false);
@@ -160,6 +161,12 @@ export default function Earn() {
       toast({ title: 'No tokens to claim', description: 'Earn tokens by interacting with posts', variant: 'destructive' });
       return;
     }
+    const ok = await confirm({
+      title: `Claim ${stats.balance} $TLC to your wallet?`,
+      description: 'This will mint your claimable points as $TLC tokens to your connected wallet on Polygon Amoy. This cannot be undone.',
+      confirmText: 'Claim Tokens',
+    });
+    if (!ok) return;
     setClaiming(true);
     const success = await claimTokens(stats.balance);
     if (success) await fetchTokenStats();
