@@ -663,10 +663,13 @@ export default function GroupDetail() {
                       joinRequests.map((req) => (
                         <div key={req.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/40">
                           <div className="flex items-center space-x-3">
-                            <Avatar className="h-9 w-9">
-                              <AvatarImage src={req.profiles?.avatar_url} />
-                              <AvatarFallback>{req.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-                            </Avatar>
+                            <span className="relative inline-block shrink-0">
+                              <Avatar className="h-9 w-9">
+                                <AvatarImage src={req.profiles?.avatar_url} />
+                                <AvatarFallback>{req.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                              </Avatar>
+                              <PresenceIndicator userId={req.user_id} asDot />
+                            </span>
                             <div>
                               <p className="text-sm font-medium">{req.profiles?.display_name || 'Unknown'}</p>
                               <p className="text-xs text-muted-foreground">
@@ -1049,10 +1052,13 @@ export default function GroupDetail() {
               {pendingInvitations.map((inv) => (
                 <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/40">
                   <div className="flex items-center space-x-3">
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={inv.inviter?.avatar_url} />
-                      <AvatarFallback>{inv.inviter?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-                    </Avatar>
+                    <span className="relative inline-block shrink-0">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={inv.inviter?.avatar_url} />
+                        <AvatarFallback>{inv.inviter?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                      </Avatar>
+                      <PresenceIndicator userId={inv.inviter_id} asDot />
+                    </span>
                     <p className="text-sm">
                       <span className="font-medium">{inv.inviter?.display_name || 'Someone'}</span> invited you to join this group
                     </p>
