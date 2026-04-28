@@ -26,6 +26,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useUnreadGroups } from '@/hooks/useUnreadGroups';
 
 export default function GroupDetail() {
   const { id } = useParams();
@@ -33,6 +34,7 @@ export default function GroupDetail() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const isSiteAdmin = useIsAdmin();
+  const { markAsRead: markGroupRead } = useUnreadGroups();
   const [group, setGroup] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -82,6 +84,13 @@ export default function GroupDetail() {
       return () => { supabase.removeChannel(channel); };
     }
   }, [isMember]);
+
+  // Mark as read whenever we view the group as a member or when new messages arrive
+  useEffect(() => {
+    if (isMember && id) {
+      markGroupRead(id);
+    }
+  }, [isMember, id, messages.length, markGroupRead]);
 
   useEffect(() => {
     if (isAdmin && id) fetchJoinRequests();
