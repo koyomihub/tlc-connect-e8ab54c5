@@ -416,13 +416,17 @@ export default function Profile() {
     event.target.value = '';
     if (!file) return;
 
-    // Avatars go through the crop/reposition dialog
-    if (type === 'avatar') {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const isAnimated = file.type === 'image/gif' || ext === 'gif';
+
+    // Avatars go through the crop/reposition dialog — except animated GIFs,
+    // which we upload as-is to preserve animation.
+    if (type === 'avatar' && !isAnimated) {
       setPendingAvatarFile(file);
       return;
     }
 
-    await uploadProfileFile(file, file.name.split('.').pop() || 'jpg', type);
+    await uploadProfileFile(file, ext, type);
   };
 
   const uploadProfileFile = async (
