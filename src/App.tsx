@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { WalletProvider } from "@/contexts/WalletContext";
 import { PresenceProvider } from "@/contexts/PresenceContext";
+import { ConfirmProvider } from "@/contexts/ConfirmContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Feed from "./pages/Feed";
@@ -53,6 +54,7 @@ const App = () => (
         <AuthProvider>
           <PresenceProvider>
           <WalletProvider>
+            <ConfirmProvider>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
@@ -165,6 +167,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
             </Routes>
+            </ConfirmProvider>
           </WalletProvider>
           </PresenceProvider>
         </AuthProvider>
