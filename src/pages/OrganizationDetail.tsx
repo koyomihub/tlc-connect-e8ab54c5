@@ -345,7 +345,10 @@ export default function OrganizationDetail() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <p className="font-semibold">{post.profiles?.display_name}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-semibold">{post.profiles?.display_name}</p>
+                          <RoleBadge userId={post.user_id} />
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                         </p>

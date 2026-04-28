@@ -76,7 +76,10 @@ export function Leaderboard() {
                   <AvatarFallback>{(entry.display_name || '?')[0].toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{entry.display_name || 'Anonymous'}</p>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <p className="text-sm font-medium truncate">{entry.display_name || 'Anonymous'}</p>
+                    <RoleBadge userId={entry.id} />
+                  </div>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold">{entry.total_earned.toLocaleString()}</p>

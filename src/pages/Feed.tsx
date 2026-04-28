@@ -596,12 +596,15 @@ export default function Feed() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="space-y-1">
-                      <p
-                        className="font-semibold cursor-pointer hover:text-primary transition-colors"
-                        onClick={() => navigate(`/profile/${post.user_id}`)}
-                      >
-                        {post.profiles?.display_name}
-                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p
+                          className="font-semibold cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => navigate(`/profile/${post.user_id}`)}
+                        >
+                          {post.profiles?.display_name}
+                        </p>
+                        <RoleBadge userId={post.user_id} />
+                      </div>
                       <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                         <span>{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
                         <PostPrivacyBadge privacy={post.privacy} />

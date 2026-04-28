@@ -972,8 +972,9 @@ export default function GroupDetail() {
                           <AvatarFallback>{m.profiles?.display_name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="text-sm font-medium flex items-center gap-1.5">
+                          <p className="text-sm font-medium flex items-center gap-1.5 flex-wrap">
                             {m.profiles?.display_name || 'Unknown'}
+                            <RoleBadge userId={m.user_id} />
                             {isSelf && <span className="text-xs text-muted-foreground">(you)</span>}
                           </p>
                           <div className="flex items-center gap-1.5 mt-0.5">
@@ -1103,9 +1104,12 @@ export default function GroupDetail() {
                         )}
                         <div className={`flex flex-col min-w-0 ${isOwn ? 'items-end' : 'items-start'} max-w-[80%] sm:max-w-[70%]`}>
                           {!isOwn && (
-                            <p className="text-xs font-semibold mb-1 text-muted-foreground truncate max-w-full">
-                              {msg.profiles?.display_name || 'Unknown'}
-                            </p>
+                            <div className="flex items-center gap-1.5 mb-1 max-w-full">
+                              <p className="text-xs font-semibold text-muted-foreground truncate">
+                                {msg.profiles?.display_name || 'Unknown'}
+                              </p>
+                              <RoleBadge userId={msg.user_id} />
+                            </div>
                           )}
                           <div className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-2 max-w-full ${isOwn ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-muted rounded-bl-sm'}`}>
                             <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm sm:text-base leading-relaxed">{msg.content}</p>

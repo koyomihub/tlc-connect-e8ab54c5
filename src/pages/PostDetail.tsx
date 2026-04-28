@@ -302,7 +302,10 @@ export default function PostDetail() {
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-semibold">{post.profiles?.display_name}</p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="font-semibold">{post.profiles?.display_name}</p>
+                  <RoleBadge userId={post.user_id} />
+                </div>
                 <p className="text-sm text-muted-foreground">
                   {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                 </p>
@@ -385,12 +388,15 @@ export default function PostDetail() {
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p 
-                        className="font-semibold text-sm cursor-pointer hover:text-primary transition-colors"
-                        onClick={() => navigate(`/profile/${comment.user_id}`)}
-                      >
-                        {comment.profiles?.display_name}
-                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p 
+                          className="font-semibold text-sm cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => navigate(`/profile/${comment.user_id}`)}
+                        >
+                          {comment.profiles?.display_name}
+                        </p>
+                        <RoleBadge userId={comment.user_id} />
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                       </p>
