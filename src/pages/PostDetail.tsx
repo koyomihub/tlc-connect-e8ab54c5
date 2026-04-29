@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PresenceIndicator } from '@/components/PresenceIndicator';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { toast } from '@/hooks/use-toast';
-import { Heart, MessageCircle, ArrowLeft, Trash2, Reply } from 'lucide-react';
+import { Heart, MessageCircle, ArrowLeft, Trash2, Reply, Pencil, Check, X } from 'lucide-react';
 import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
 import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
@@ -56,6 +56,34 @@ export default function PostDetail() {
   const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const startEditComment = (c: Comment) => {
+    setEditingCommentId(c.id);
+    setEditingCommentContent(c.content);
+  };
+  const cancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditingCommentContent('');
+  };
+  const saveEditComment = async () => {
+    if (!editingCommentId || !editingCommentContent.trim()) return;
+    setSavingEdit(true);
+    const { error } = await supabase
+      .from('post_comments')
+      .update({ content: editingCommentContent.trim(), updated_at: new Date().toISOString() })
+      .eq('id', editingCommentId);
+    setSavingEdit(false);
+    if (error) {
+      toast({ title: 'Error updating comment', description: error.message, variant: 'destructive' });
+    } else {
+      cancelEditComment();
+      fetchComments();
+      toast({ title: 'Comment updated' });
+    }
+  };
   
   
 
