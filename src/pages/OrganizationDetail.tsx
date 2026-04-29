@@ -65,6 +65,21 @@ export default function OrganizationDetail() {
     }
   }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`org-detail-${id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'organization_posts', filter: `organization_id=eq.${id}` },
+        () => {
+          fetchPosts();
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [id]);
+
   // Mark org as read whenever we visit / new post arrives while viewing
   useEffect(() => {
     if (id) markOrgRead(id);
