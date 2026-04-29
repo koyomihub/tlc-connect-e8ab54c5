@@ -164,8 +164,8 @@ export function MainLayout({ children }: MainLayoutProps) {
             {/* Presence selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative" aria-label={`Status: ${presenceLabel}`}>
-                  <Circle className={cn('h-4 w-4 fill-current', presenceDotClass.replace('bg-', 'text-'))} />
+                <Button variant="ghost" size="icon" className="relative" aria-label={`Status: ${presenceLabel}`} title={`Status: ${presenceLabel}`}>
+                  <Circle className={cn('h-4 w-4 fill-current', presenceDotColor)} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
