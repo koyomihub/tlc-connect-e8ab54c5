@@ -33,6 +33,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
   const [isIdle, setIsIdle] = useState(false);
   const channelRef = useRef<any>(null);
   const lastActivityRef = useRef<number>(Date.now());
+  const trackVersionRef = useRef(0);
 
   // Compute my visible status from preference + idle detection
   const computeStatus = useCallback((): PresenceStatus => {
@@ -142,15 +143,20 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const ch = channelRef.current;
     if (!ch || !user) return;
-    let cancelled = false;
+    const version = ++trackVersionRef.current;
+    setPresence((prev) => {
+      const next = { ...prev };
+      if (myStatus === 'offline') delete next[user.id];
+      else next[user.id] = myStatus;
+      return next;
+    });
     (async () => {
       try { await ch.untrack(); } catch {}
-      if (cancelled) return;
+      if (version !== trackVersionRef.current) return;
       if (myStatus !== 'offline') {
-        try { await ch.track({ status: myStatus, online_at: Date.now() }); } catch {}
+        try { await ch.track({ status: myStatus, online_at: Date.now(), version }); } catch {}
       }
     })();
-    return () => { cancelled = true; };
   }, [myStatus, user]);
 
   return (
