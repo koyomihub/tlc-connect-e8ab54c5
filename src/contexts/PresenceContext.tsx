@@ -151,11 +151,8 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
       return next;
     });
     (async () => {
-      try { await ch.untrack(); } catch {}
       if (version !== trackVersionRef.current) return;
-      if (myStatus !== 'offline') {
-        try { await ch.track({ status: myStatus, online_at: Date.now(), version }); } catch {}
-      }
+      try { await ch.track({ status: myStatus, online_at: Date.now(), version }); } catch {}
     })();
   }, [myStatus, user]);
 
