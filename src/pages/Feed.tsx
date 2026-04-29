@@ -571,21 +571,12 @@ export default function Feed() {
         </div>
 
         {(() => {
-          // Merge posts and reposts, then rank with weighted score:
-          // recency (decays over ~48h) + engagement (likes/comments/reposts) + random jitter.
-          const now = Date.now();
-          const HALF_LIFE_HRS = 12; // recency weight halves every 12h
-          const score = (p: Post, ts: string) => {
-            const ageHrs = Math.max(0, (now - new Date(ts).getTime()) / 3600_000);
-            const recency = Math.pow(0.5, ageHrs / HALF_LIFE_HRS); // 0..1
-            const engagement = (p.likes_count || 0) * 1 + (p.comments_count || 0) * 2 + (p.reposts_count || 0) * 3;
-            const engagementNorm = Math.log1p(engagement) / 4; // dampened
-            const jitter = Math.random() * 0.3;
-            return recency * 1.5 + engagementNorm * 1.0 + jitter;
-          };
+          // Fresh discovery order per page load: every visible post/repost gets
+          // an equal random chance, instead of recency/engagement dominating.
+          const seed = feedShuffleSeedRef.current;
           const feedItems: (FeedItem & { _score: number })[] = [
-            ...posts.map((p) => ({ kind: 'post' as const, sortDate: p.created_at, post: p, _score: score(p, p.created_at) })),
-            ...reposts.map((r) => ({ kind: 'repost' as const, sortDate: r.created_at, post: r.post, repost: r, _score: score(r.post, r.created_at) })),
+            ...posts.map((p) => ({ kind: 'post' as const, sortDate: p.created_at, post: p, _score: randomRank(`post-${p.id}`, seed) })),
+            ...reposts.map((r) => ({ kind: 'repost' as const, sortDate: r.created_at, post: r.post, repost: r, _score: randomRank(`repost-${r.id}`, seed) })),
           ].sort((a, b) => b._score - a._score);
 
           if (feedItems.length === 0) {
