@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PresenceIndicator } from '@/components/PresenceIndicator';
 import { Input } from '@/components/ui/input';
 import {
-  ArrowLeft, Send, Users, Edit, Trash2, Crown, Camera, UserPlus, Lock, Globe, Check, X, Inbox, UserMinus, Shield,
+  ArrowLeft, Send, Users, Edit, Trash2, Crown, Camera, UserPlus, Lock, Globe, Check, X, Inbox, UserMinus, Shield, Pencil,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { awardTokens } from '@/lib/awardTokens';
@@ -69,7 +69,32 @@ export default function GroupDetail() {
   const coverRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
+  const [editingMsgContent, setEditingMsgContent] = useState('');
+  const [savingMsgEdit, setSavingMsgEdit] = useState(false);
 
+  const startEditMessage = (msg: any) => {
+    setEditingMsgId(msg.id);
+    setEditingMsgContent(msg.content);
+  };
+  const cancelEditMessage = () => {
+    setEditingMsgId(null);
+    setEditingMsgContent('');
+  };
+  const saveEditMessage = async () => {
+    if (!editingMsgId || !editingMsgContent.trim()) return;
+    setSavingMsgEdit(true);
+    const { error } = await supabase
+      .from('group_messages')
+      .update({ content: editingMsgContent.trim(), updated_at: new Date().toISOString() })
+      .eq('id', editingMsgId);
+    setSavingMsgEdit(false);
+    if (error) {
+      toast({ title: 'Error updating message', description: error.message, variant: 'destructive' });
+    } else {
+      cancelEditMessage();
+    }
+  };
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages]);
