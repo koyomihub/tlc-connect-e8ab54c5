@@ -161,19 +161,37 @@ export default function Earn() {
     setClaimingLogin(false);
   };
 
-  const handleClaimToWallet = async () => {
+  const [claimDialogOpen, setClaimDialogOpen] = useState(false);
+  const [claimAmountInput, setClaimAmountInput] = useState('');
+
+  const openClaimDialog = () => {
     if (stats.balance === 0) {
       toast({ title: 'No tokens to claim', description: 'Earn tokens by interacting with posts', variant: 'destructive' });
       return;
     }
+    setClaimAmountInput(String(stats.balance));
+    setClaimDialogOpen(true);
+  };
+
+  const handleClaimToWallet = async () => {
+    const amount = parseInt(claimAmountInput, 10);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast({ title: 'Enter a valid amount', variant: 'destructive' });
+      return;
+    }
+    if (amount > stats.balance) {
+      toast({ title: 'Not enough points', description: `You only have ${stats.balance} claimable points.`, variant: 'destructive' });
+      return;
+    }
     const ok = await confirm({
-      title: `Claim ${stats.balance} $TLC to your wallet?`,
-      description: 'This will mint your claimable points as $TLC tokens to your connected wallet on Polygon Amoy. This cannot be undone.',
+      title: `Claim ${amount} $TLC to your wallet?`,
+      description: 'This will mint that amount as $TLC tokens to your connected wallet on Polygon Amoy. This cannot be undone.',
       confirmText: 'Claim Tokens',
     });
     if (!ok) return;
+    setClaimDialogOpen(false);
     setClaiming(true);
-    const success = await claimTokens(stats.balance);
+    const success = await claimTokens(amount);
     if (success) await fetchTokenStats();
     setClaiming(false);
   };
