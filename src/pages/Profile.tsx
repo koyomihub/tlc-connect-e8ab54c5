@@ -465,6 +465,27 @@ export default function Profile() {
     await uploadProfileFile(blob, 'jpg', 'avatar');
   };
 
+  const removeProfileImage = async (type: 'avatar' | 'cover') => {
+    if (!isOwnProfile || !user) return;
+    const label = type === 'avatar' ? 'profile picture' : 'cover photo';
+    if (!(await confirm({ title: `Remove ${label}?`, description: 'This will reset to the default look.', confirmText: 'Remove', destructive: true }))) return;
+    setLoading(true);
+    try {
+      const updateField = type === 'avatar' ? 'avatar_url' : 'cover_photo_url';
+      const { error } = await supabase
+        .from('profiles')
+        .update({ [updateField]: null })
+        .eq('id', user.id);
+      if (error) throw error;
+      setProfile((prev: any) => ({ ...prev, [updateField]: null }));
+      toast({ title: `${label[0].toUpperCase()}${label.slice(1)} removed` });
+    } catch (err: any) {
+      toast({ title: 'Could not remove', description: err.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const updateProfile = async () => {
     setLoading(true);
