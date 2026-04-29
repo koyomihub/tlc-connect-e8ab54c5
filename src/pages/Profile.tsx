@@ -953,7 +953,16 @@ export default function Profile() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+      <Dialog
+        open={passwordDialogOpen}
+        onOpenChange={(open) => {
+          setPasswordDialogOpen(open);
+          if (!open) {
+            setNewPassword('');
+            setConfirmPassword('');
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
             <DialogTitle>Change Password</DialogTitle>
