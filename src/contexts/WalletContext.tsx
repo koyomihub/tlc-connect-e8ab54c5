@@ -170,7 +170,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       toast({ title: "Claiming tokens...", description: "Minting $TLC to your wallet on Polygon Amoy" });
 
       const { data, error } = await supabase.functions.invoke('claim-tokens', {
-        body: { walletAddress: account },
+        body: { walletAddress: account, amount },
       });
 
       if (error) {

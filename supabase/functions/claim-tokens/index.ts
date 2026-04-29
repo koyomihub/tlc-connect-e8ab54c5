@@ -58,13 +58,25 @@ serve(async (req) => {
     const userId = claimsData.claims.sub as string;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { walletAddress } = await req.json();
+    const { walletAddress, amount: requestedAmount } = await req.json();
 
     if (!walletAddress || !ethers.isAddress(walletAddress)) {
       return new Response(
         JSON.stringify({ error: 'Invalid wallet address' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Optional explicit amount; if omitted, claim full balance
+    let parsedAmount: number | null = null;
+    if (requestedAmount !== undefined && requestedAmount !== null) {
+      parsedAmount = Number(requestedAmount);
+      if (!Number.isFinite(parsedAmount) || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid claim amount — must be a positive whole number' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Get user's current token balance
@@ -89,10 +101,18 @@ serve(async (req) => {
       );
     }
 
-    const claimAmount = profile.token_balance || 0;
-    if (claimAmount <= 0) {
+    const availableBalance = profile.token_balance || 0;
+    if (availableBalance <= 0) {
       return new Response(
         JSON.stringify({ error: 'No tokens to claim' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const claimAmount = parsedAmount ?? availableBalance;
+    if (claimAmount > availableBalance) {
+      return new Response(
+        JSON.stringify({ error: `Requested ${claimAmount} but only ${availableBalance} available` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -110,10 +130,11 @@ serve(async (req) => {
     const receipt = await tx.wait();
     console.log(`Transaction confirmed in block ${receipt.blockNumber}`);
 
-    // Deduct balance from profile
+    // Deduct claimed amount from profile (preserve any leftover)
+    const newBalance = availableBalance - claimAmount;
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ token_balance: 0 })
+      .update({ token_balance: newBalance })
       .eq('id', userId);
 
     if (updateError) {

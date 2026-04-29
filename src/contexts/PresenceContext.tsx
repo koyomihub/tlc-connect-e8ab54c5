@@ -65,6 +65,10 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
     async (pref: PresencePreference) => {
       if (!user) return;
       setPreferenceState(pref);
+      // When user actively chooses, treat it as activity so 'auto' immediately
+      // reads as online (not stuck on idle).
+      lastActivityRef.current = Date.now();
+      setIsIdle(false);
       await supabase.from('profiles').update({ presence_preference: pref } as any).eq('id', user.id);
     },
     [user],
@@ -133,17 +137,21 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
     };
   }, [user]); // intentionally only on user change
 
-  // Re-track when status changes
+  // Re-track when status changes — always untrack first so rapid back-to-back
+  // changes (e.g. auto → invisible → auto) reliably re-broadcast.
   useEffect(() => {
     const ch = channelRef.current;
     if (!ch || !user) return;
-    const status = computeStatus();
-    if (status === 'offline') {
-      try { ch.untrack(); } catch {}
-    } else {
-      ch.track({ status, online_at: Date.now() });
-    }
-  }, [myStatus, user, computeStatus]);
+    let cancelled = false;
+    (async () => {
+      try { await ch.untrack(); } catch {}
+      if (cancelled) return;
+      if (myStatus !== 'offline') {
+        try { await ch.track({ status: myStatus, online_at: Date.now() }); } catch {}
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [myStatus, user]);
 
   return (
     <PresenceContext.Provider value={{ presence, preference, myStatus, setPreference }}>

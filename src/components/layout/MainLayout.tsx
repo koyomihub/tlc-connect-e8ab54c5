@@ -109,10 +109,10 @@ export function MainLayout({ children }: MainLayoutProps) {
     navigate(path);
   };
 
-  const presenceDotClass =
-    myStatus === 'online' ? 'bg-emerald-500'
-    : myStatus === 'idle' ? 'bg-amber-400'
-    : 'bg-muted-foreground/40';
+  const presenceDotColor =
+    myStatus === 'online' ? 'text-emerald-500'
+    : myStatus === 'idle' ? 'text-amber-400'
+    : 'text-muted-foreground/40';
 
   const presenceLabel = myStatus === 'online' ? 'Active' : myStatus === 'idle' ? 'Idle' : 'Invisible';
 
@@ -164,8 +164,8 @@ export function MainLayout({ children }: MainLayoutProps) {
             {/* Presence selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative" aria-label={`Status: ${presenceLabel}`}>
-                  <Circle className={cn('h-4 w-4 fill-current', presenceDotClass.replace('bg-', 'text-'))} />
+                <Button variant="ghost" size="icon" className="relative" aria-label={`Status: ${presenceLabel}`} title={`Status: ${presenceLabel}`}>
+                  <Circle className={cn('h-4 w-4 fill-current', presenceDotColor)} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -193,6 +193,8 @@ export function MainLayout({ children }: MainLayoutProps) {
                 size="icon"
                 className="hidden sm:inline-flex"
                 onClick={() => navigate('/admin')}
+                title="Admin"
+                aria-label="Admin"
               >
                 <Shield className="h-5 w-5" />
               </Button>
@@ -203,6 +205,8 @@ export function MainLayout({ children }: MainLayoutProps) {
               size="icon"
               className="hidden sm:inline-flex"
               onClick={() => navigate('/profile')}
+              title="Profile"
+              aria-label="Profile"
             >
               <User className="h-5 w-5" />
             </Button>
@@ -212,6 +216,8 @@ export function MainLayout({ children }: MainLayoutProps) {
               size="icon"
               className="hidden sm:inline-flex"
               onClick={requestLogout}
+              title="Sign out"
+              aria-label="Sign out"
             >
               <LogOut className="h-5 w-5" />
             </Button>

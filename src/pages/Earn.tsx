@@ -4,6 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 import { Coins, TrendingUp, Award, Users, Heart, MessageCircle, Wallet, WalletCards, Unplug } from 'lucide-react';
 import { ClaimHistory } from '@/components/earn/ClaimHistory';
 import { OnChainBalance } from '@/components/earn/OnChainBalance';
@@ -156,19 +161,37 @@ export default function Earn() {
     setClaimingLogin(false);
   };
 
-  const handleClaimToWallet = async () => {
+  const [claimDialogOpen, setClaimDialogOpen] = useState(false);
+  const [claimAmountInput, setClaimAmountInput] = useState('');
+
+  const openClaimDialog = () => {
     if (stats.balance === 0) {
       toast({ title: 'No tokens to claim', description: 'Earn tokens by interacting with posts', variant: 'destructive' });
       return;
     }
+    setClaimAmountInput(String(stats.balance));
+    setClaimDialogOpen(true);
+  };
+
+  const handleClaimToWallet = async () => {
+    const amount = parseInt(claimAmountInput, 10);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast({ title: 'Enter a valid amount', variant: 'destructive' });
+      return;
+    }
+    if (amount > stats.balance) {
+      toast({ title: 'Not enough points', description: `You only have ${stats.balance} claimable points.`, variant: 'destructive' });
+      return;
+    }
     const ok = await confirm({
-      title: `Claim ${stats.balance} $TLC to your wallet?`,
-      description: 'This will mint your claimable points as $TLC tokens to your connected wallet on Polygon Amoy. This cannot be undone.',
+      title: `Claim ${amount} $TLC to your wallet?`,
+      description: 'This will mint that amount as $TLC tokens to your connected wallet on Polygon Amoy. This cannot be undone.',
       confirmText: 'Claim Tokens',
     });
     if (!ok) return;
+    setClaimDialogOpen(false);
     setClaiming(true);
-    const success = await claimTokens(stats.balance);
+    const success = await claimTokens(amount);
     if (success) await fetchTokenStats();
     setClaiming(false);
   };
@@ -235,7 +258,7 @@ export default function Earn() {
                     </Button>
                   </div>
                   <OnChainBalance />
-                  <Button onClick={handleClaimToWallet} disabled={claiming || stats.balance === 0} variant="secondary" className="w-full">
+                  <Button onClick={openClaimDialog} disabled={claiming || stats.balance === 0} variant="secondary" className="w-full">
                     <WalletCards className="h-4 w-4 mr-2" />
                     {claiming ? 'Claiming...' : 'Claim to Wallet'}
                   </Button>
@@ -330,6 +353,43 @@ export default function Earn() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Claim amount dialog */}
+      <Dialog open={claimDialogOpen} onOpenChange={setClaimDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Claim $TLC to Wallet</DialogTitle>
+            <DialogDescription>
+              You have <span className="font-semibold text-foreground">{stats.balance}</span> claimable points. Enter how many you want to claim.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label htmlFor="claim-amount">Amount</Label>
+            <Input
+              id="claim-amount"
+              type="number"
+              min={1}
+              max={stats.balance}
+              value={claimAmountInput}
+              onChange={(e) => setClaimAmountInput(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setClaimAmountInput(String(Math.floor(stats.balance / 2)))}>
+                Half
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => setClaimAmountInput(String(stats.balance))}>
+                Max
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClaimDialogOpen(false)} disabled={claiming}>Cancel</Button>
+            <Button onClick={handleClaimToWallet} disabled={claiming}>
+              {claiming ? 'Claiming...' : 'Claim'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
