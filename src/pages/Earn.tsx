@@ -258,7 +258,7 @@ export default function Earn() {
                     </Button>
                   </div>
                   <OnChainBalance />
-                  <Button onClick={handleClaimToWallet} disabled={claiming || stats.balance === 0} variant="secondary" className="w-full">
+                  <Button onClick={openClaimDialog} disabled={claiming || stats.balance === 0} variant="secondary" className="w-full">
                     <WalletCards className="h-4 w-4 mr-2" />
                     {claiming ? 'Claiming...' : 'Claim to Wallet'}
                   </Button>
