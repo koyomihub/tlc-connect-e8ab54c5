@@ -680,7 +680,13 @@ export default function Profile() {
               <div className="flex gap-2 sm:self-end">
                 {isOwnProfile ? (
                   !editing ? (
-                    <Button onClick={() => setEditing(true)}>Edit Profile</Button>
+                    <>
+                      <Button variant="outline" onClick={() => setPasswordDialogOpen(true)}>
+                        <KeyRound className="mr-2 h-4 w-4" />
+                        Change Password
+                      </Button>
+                      <Button onClick={() => setEditing(true)}>Edit Profile</Button>
+                    </>
                   ) : (
                     <>
                       <Button variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
