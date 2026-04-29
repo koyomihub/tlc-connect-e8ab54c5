@@ -122,7 +122,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         <div className="container mx-auto flex h-16 items-center justify-between gap-2 px-3 sm:px-4">
           <div
             className="flex items-center space-x-2 cursor-pointer min-w-0"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/feed')}
           >
             <img
               src={logo}
