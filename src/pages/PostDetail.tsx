@@ -153,6 +153,21 @@ export default function PostDetail() {
           setPost((prev) => prev ? { ...prev, ...(payload.new as Partial<Post>) } : prev);
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_comments', filter: `post_id=eq.${id}` },
+        () => {
+          fetchComments();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_likes', filter: `post_id=eq.${id}` },
+        () => {
+          fetchPost();
+          checkLikeStatus();
+        }
+      )
       .subscribe();
 
     return () => {
