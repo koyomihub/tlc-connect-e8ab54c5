@@ -1236,7 +1236,7 @@ export default function GroupDetail() {
                     }
                   }}
                 />
-                <Button onClick={sendMessage} size="icon" className="shrink-0">
+                <Button onClick={sendMessage} size="icon" className="shrink-0" title="Send message" aria-label="Send message">
                   <Send className="h-4 w-4" />
                 </Button>
               </div>

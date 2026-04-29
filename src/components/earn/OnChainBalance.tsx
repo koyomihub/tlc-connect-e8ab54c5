@@ -37,6 +37,8 @@ export function OnChainBalance() {
         size="icon"
         onClick={fetchOnChainBalance}
         disabled={loading}
+        title="Refresh on-chain balance"
+        aria-label="Refresh on-chain balance"
         className="text-white/60 hover:text-white hover:bg-white/10 shrink-0"
       >
         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
