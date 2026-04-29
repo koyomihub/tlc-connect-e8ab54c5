@@ -353,6 +353,43 @@ export default function Earn() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Claim amount dialog */}
+      <Dialog open={claimDialogOpen} onOpenChange={setClaimDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Claim $TLC to Wallet</DialogTitle>
+            <DialogDescription>
+              You have <span className="font-semibold text-foreground">{stats.balance}</span> claimable points. Enter how many you want to claim.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label htmlFor="claim-amount">Amount</Label>
+            <Input
+              id="claim-amount"
+              type="number"
+              min={1}
+              max={stats.balance}
+              value={claimAmountInput}
+              onChange={(e) => setClaimAmountInput(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setClaimAmountInput(String(Math.floor(stats.balance / 2)))}>
+                Half
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => setClaimAmountInput(String(stats.balance))}>
+                Max
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClaimDialogOpen(false)} disabled={claiming}>Cancel</Button>
+            <Button onClick={handleClaimToWallet} disabled={claiming}>
+              {claiming ? 'Claiming...' : 'Claim'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
