@@ -618,10 +618,23 @@ export default function Profile() {
                       onClick={() => avatarInputRef.current?.click()}
                       disabled={loading}
                       aria-label="Change profile photo"
+                      title="Change profile photo"
                       className="absolute bottom-1 right-1 bg-background border border-border shadow rounded-full p-2 hover:bg-accent transition"
                     >
                       <Camera className="h-4 w-4" />
                     </button>
+                    {profile?.avatar_url && (
+                      <button
+                        type="button"
+                        onClick={() => removeProfileImage('avatar')}
+                        disabled={loading}
+                        aria-label="Remove profile photo"
+                        title="Remove profile photo"
+                        className="absolute top-1 right-1 bg-background border border-destructive/40 text-destructive shadow rounded-full p-1.5 hover:bg-destructive/10 transition"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                     <input
                       ref={avatarInputRef}
                       type="file"
