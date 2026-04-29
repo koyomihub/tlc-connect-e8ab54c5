@@ -65,6 +65,10 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
     async (pref: PresencePreference) => {
       if (!user) return;
       setPreferenceState(pref);
+      // When user actively chooses, treat it as activity so 'auto' immediately
+      // reads as online (not stuck on idle).
+      lastActivityRef.current = Date.now();
+      setIsIdle(false);
       await supabase.from('profiles').update({ presence_preference: pref } as any).eq('id', user.id);
     },
     [user],
