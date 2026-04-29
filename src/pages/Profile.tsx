@@ -21,6 +21,7 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
+  KeyRound,
   Globe,
   Users as UsersIcon,
 } from 'lucide-react';
@@ -109,6 +110,10 @@ export default function Profile() {
   const [editContent, setEditContent] = useState('');
   const [editPrivacy, setEditPrivacy] = useState<PostPrivacy>('public');
   const [editSaving, setEditSaving] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   useEffect(() => {
     if (profileId) {
@@ -502,6 +507,32 @@ export default function Profile() {
     }
   };
 
+  const updatePassword = async () => {
+    if (!isOwnProfile || !user) return;
+    if (newPassword.length < 8) {
+      toast({ title: 'Password too short', description: 'Use at least 8 characters.', variant: 'destructive' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: 'Passwords do not match', variant: 'destructive' });
+      return;
+    }
+
+    setPasswordSaving(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setPasswordSaving(false);
+
+    if (error) {
+      toast({ title: 'Password update failed', description: error.message, variant: 'destructive' });
+      return;
+    }
+
+    setPasswordDialogOpen(false);
+    setNewPassword('');
+    setConfirmPassword('');
+    toast({ title: 'Password updated', description: 'Your account password has been changed.' });
+  };
+
   return (
     <MainLayout>
       <div className="max-w-3xl mx-auto space-y-6">
@@ -649,7 +680,13 @@ export default function Profile() {
               <div className="flex gap-2 sm:self-end">
                 {isOwnProfile ? (
                   !editing ? (
-                    <Button onClick={() => setEditing(true)}>Edit Profile</Button>
+                    <>
+                      <Button variant="outline" onClick={() => setPasswordDialogOpen(true)}>
+                        <KeyRound className="mr-2 h-4 w-4" />
+                        Change Password
+                      </Button>
+                      <Button onClick={() => setEditing(true)}>Edit Profile</Button>
+                    </>
                   ) : (
                     <>
                       <Button variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
@@ -911,6 +948,55 @@ export default function Profile() {
             </Button>
             <Button onClick={saveEdit} disabled={editSaving}>
               {editSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={passwordDialogOpen}
+        onOpenChange={(open) => {
+          setPasswordDialogOpen(open);
+          if (!open) {
+            setNewPassword('');
+            setConfirmPassword('');
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+            <DialogDescription>Choose a stronger password for your account.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 8 characters"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-new-password">Confirm new password</Label>
+              <Input
+                id="confirm-new-password"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasswordDialogOpen(false)} disabled={passwordSaving}>
+              Cancel
+            </Button>
+            <Button onClick={updatePassword} disabled={passwordSaving || !newPassword || !confirmPassword}>
+              {passwordSaving ? 'Updating...' : 'Update Password'}
             </Button>
           </DialogFooter>
         </DialogContent>
