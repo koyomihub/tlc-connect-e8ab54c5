@@ -109,10 +109,10 @@ export function MainLayout({ children }: MainLayoutProps) {
     navigate(path);
   };
 
-  const presenceDotClass =
-    myStatus === 'online' ? 'bg-emerald-500'
-    : myStatus === 'idle' ? 'bg-amber-400'
-    : 'bg-muted-foreground/40';
+  const presenceDotColor =
+    myStatus === 'online' ? 'text-emerald-500'
+    : myStatus === 'idle' ? 'text-amber-400'
+    : 'text-muted-foreground/40';
 
   const presenceLabel = myStatus === 'online' ? 'Active' : myStatus === 'idle' ? 'Idle' : 'Invisible';
 
