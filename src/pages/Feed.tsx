@@ -66,12 +66,24 @@ type FeedItem =
   | { kind: 'post'; sortDate: string; post: Post }
   | { kind: 'repost'; sortDate: string; post: Post; repost: RepostItem };
 
+const randomRank = (key: string, seed: number) => {
+  let hash = seed >>> 0;
+  for (let i = 0; i < key.length; i += 1) {
+    hash ^= key.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+};
+
 export default function Feed() {
   const { user } = useAuth();
   const isAdmin = useIsAdmin();
   const navigate = useNavigate();
   const confirm = useConfirm();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const feedShuffleSeedRef = useRef(
+    (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
+  );
   const [posts, setPosts] = useState<Post[]>([]);
   const [newPost, setNewPost] = useState('');
   const [imageFiles, setImageFiles] = useState<File[]>([]);
