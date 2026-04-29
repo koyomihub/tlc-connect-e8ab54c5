@@ -507,6 +507,32 @@ export default function Profile() {
     }
   };
 
+  const updatePassword = async () => {
+    if (!isOwnProfile || !user) return;
+    if (newPassword.length < 8) {
+      toast({ title: 'Password too short', description: 'Use at least 8 characters.', variant: 'destructive' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: 'Passwords do not match', variant: 'destructive' });
+      return;
+    }
+
+    setPasswordSaving(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setPasswordSaving(false);
+
+    if (error) {
+      toast({ title: 'Password update failed', description: error.message, variant: 'destructive' });
+      return;
+    }
+
+    setPasswordDialogOpen(false);
+    setNewPassword('');
+    setConfirmPassword('');
+    toast({ title: 'Password updated', description: 'Your account password has been changed.' });
+  };
+
   return (
     <MainLayout>
       <div className="max-w-3xl mx-auto space-y-6">
