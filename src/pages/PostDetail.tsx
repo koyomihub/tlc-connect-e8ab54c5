@@ -456,7 +456,7 @@ export default function PostDetail() {
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
-                      {user && (
+                      {user && editingCommentId !== comment.id && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -467,20 +467,49 @@ export default function PostDetail() {
                           Reply
                         </Button>
                       )}
-                      {user?.id === comment.user_id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteComment(comment.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                      {user?.id === comment.user_id && editingCommentId !== comment.id && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEditComment(comment)}
+                            title="Edit comment"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteComment(comment.id)}
+                            title="Delete comment"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground/90 whitespace-pre-wrap break-words">
-                    {renderCommentContent(comment.content)}
-                  </p>
+                  {editingCommentId === comment.id ? (
+                    <div className="mt-2 space-y-2">
+                      <Textarea
+                        value={editingCommentContent}
+                        onChange={(e) => setEditingCommentContent(e.target.value)}
+                        className="min-h-[80px]"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" onClick={saveEditComment} disabled={savingEdit || !editingCommentContent.trim()}>
+                          <Check className="h-3 w-3 mr-1" /> Save
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={cancelEditComment} disabled={savingEdit}>
+                          <X className="h-3 w-3 mr-1" /> Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted-foreground/90 whitespace-pre-wrap break-words">
+                      {renderCommentContent(comment.content)}
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
