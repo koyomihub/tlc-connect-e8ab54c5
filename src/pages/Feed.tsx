@@ -141,7 +141,7 @@ export default function Feed() {
     fetchUserProfile();
 
     const channel = supabase
-      .channel(`feed-posts-${user.id}`)
+      .channel(`feed-realtime-${user.id}`)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'posts' },
@@ -159,6 +159,20 @@ export default function Feed() {
           ));
         }
       )
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
+        fetchPosts();
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'posts' }, (payload) => {
+        const oldId = (payload.old as any)?.id;
+        if (oldId) setPosts((prev) => prev.filter((p) => p.id !== oldId));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reposts' }, () => {
+        fetchReposts();
+        fetchRepostedPosts();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'post_likes' }, () => {
+        fetchLikedPosts();
+      })
       .subscribe();
 
     return () => {
