@@ -953,6 +953,46 @@ export default function Profile() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+            <DialogDescription>Choose a stronger password for your account.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 8 characters"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-new-password">Confirm new password</Label>
+              <Input
+                id="confirm-new-password"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasswordDialogOpen(false)} disabled={passwordSaving}>
+              Cancel
+            </Button>
+            <Button onClick={updatePassword} disabled={passwordSaving || !newPassword || !confirmPassword}>
+              {passwordSaving ? 'Updating...' : 'Update Password'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Image viewer */}
       <Dialog open={!!viewerImage} onOpenChange={(open) => !open && setViewerImage(null)}>
         <DialogContent className="max-w-[95vw] sm:max-w-4xl p-0 bg-background/95 backdrop-blur border-0 overflow-hidden">
