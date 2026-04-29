@@ -65,6 +65,21 @@ export default function OrganizationDetail() {
     }
   }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`org-detail-${id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'organization_posts', filter: `organization_id=eq.${id}` },
+        () => {
+          fetchPosts();
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [id]);
+
   // Mark org as read whenever we visit / new post arrives while viewing
   useEffect(() => {
     if (id) markOrgRead(id);
@@ -373,7 +388,7 @@ export default function OrganizationDetail() {
                     {(isOwner || canDelete) && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Post options" aria-label="Post options">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>

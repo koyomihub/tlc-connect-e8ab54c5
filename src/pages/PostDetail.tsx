@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PresenceIndicator } from '@/components/PresenceIndicator';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { toast } from '@/hooks/use-toast';
-import { Heart, MessageCircle, ArrowLeft, Trash2, Reply } from 'lucide-react';
+import { Heart, MessageCircle, ArrowLeft, Trash2, Reply, Pencil, Check, X } from 'lucide-react';
 import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
 import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
@@ -56,6 +56,34 @@ export default function PostDetail() {
   const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const startEditComment = (c: Comment) => {
+    setEditingCommentId(c.id);
+    setEditingCommentContent(c.content);
+  };
+  const cancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditingCommentContent('');
+  };
+  const saveEditComment = async () => {
+    if (!editingCommentId || !editingCommentContent.trim()) return;
+    setSavingEdit(true);
+    const { error } = await supabase
+      .from('post_comments')
+      .update({ content: editingCommentContent.trim(), updated_at: new Date().toISOString() })
+      .eq('id', editingCommentId);
+    setSavingEdit(false);
+    if (error) {
+      toast({ title: 'Error updating comment', description: error.message, variant: 'destructive' });
+    } else {
+      cancelEditComment();
+      fetchComments();
+      toast({ title: 'Comment updated' });
+    }
+  };
   
   
 
@@ -123,6 +151,21 @@ export default function PostDetail() {
         { event: 'UPDATE', schema: 'public', table: 'posts', filter: `id=eq.${id}` },
         (payload) => {
           setPost((prev) => prev ? { ...prev, ...(payload.new as Partial<Post>) } : prev);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_comments', filter: `post_id=eq.${id}` },
+        () => {
+          fetchComments();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_likes', filter: `post_id=eq.${id}` },
+        () => {
+          fetchPost();
+          checkLikeStatus();
         }
       )
       .subscribe();
@@ -413,7 +456,7 @@ export default function PostDetail() {
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
-                      {user && (
+                      {user && editingCommentId !== comment.id && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -424,20 +467,49 @@ export default function PostDetail() {
                           Reply
                         </Button>
                       )}
-                      {user?.id === comment.user_id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteComment(comment.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                      {user?.id === comment.user_id && editingCommentId !== comment.id && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEditComment(comment)}
+                            title="Edit comment"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteComment(comment.id)}
+                            title="Delete comment"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground/90 whitespace-pre-wrap break-words">
-                    {renderCommentContent(comment.content)}
-                  </p>
+                  {editingCommentId === comment.id ? (
+                    <div className="mt-2 space-y-2">
+                      <Textarea
+                        value={editingCommentContent}
+                        onChange={(e) => setEditingCommentContent(e.target.value)}
+                        className="min-h-[80px]"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" onClick={saveEditComment} disabled={savingEdit || !editingCommentContent.trim()}>
+                          <Check className="h-3 w-3 mr-1" /> Save
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={cancelEditComment} disabled={savingEdit}>
+                          <X className="h-3 w-3 mr-1" /> Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted-foreground/90 whitespace-pre-wrap break-words">
+                      {renderCommentContent(comment.content)}
+                    </p>
+                  )}
                 </div>
               </div>
             ))}

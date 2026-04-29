@@ -225,7 +225,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             {/* Mobile/tablet menu button (replaces overflow icons) */}
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="lg:hidden relative">
+                <Button variant="ghost" size="icon" className="lg:hidden relative" title="Menu" aria-label="Menu">
                   <Menu className="h-5 w-5" />
                   {(hasUnreadGroups || hasUnreadOrgs) && (
                     <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive ring-2 ring-card" />

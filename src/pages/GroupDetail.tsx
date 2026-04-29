@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PresenceIndicator } from '@/components/PresenceIndicator';
 import { Input } from '@/components/ui/input';
 import {
-  ArrowLeft, Send, Users, Edit, Trash2, Crown, Camera, UserPlus, Lock, Globe, Check, X, Inbox, UserMinus, Shield,
+  ArrowLeft, Send, Users, Edit, Trash2, Crown, Camera, UserPlus, Lock, Globe, Check, X, Inbox, UserMinus, Shield, Pencil,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { awardTokens } from '@/lib/awardTokens';
@@ -69,7 +69,32 @@ export default function GroupDetail() {
   const coverRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
+  const [editingMsgContent, setEditingMsgContent] = useState('');
+  const [savingMsgEdit, setSavingMsgEdit] = useState(false);
 
+  const startEditMessage = (msg: any) => {
+    setEditingMsgId(msg.id);
+    setEditingMsgContent(msg.content);
+  };
+  const cancelEditMessage = () => {
+    setEditingMsgId(null);
+    setEditingMsgContent('');
+  };
+  const saveEditMessage = async () => {
+    if (!editingMsgId || !editingMsgContent.trim()) return;
+    setSavingMsgEdit(true);
+    const { error } = await supabase
+      .from('group_messages')
+      .update({ content: editingMsgContent.trim(), updated_at: new Date().toISOString() })
+      .eq('id', editingMsgId);
+    setSavingMsgEdit(false);
+    if (error) {
+      toast({ title: 'Error updating message', description: error.message, variant: 'destructive' });
+    } else {
+      cancelEditMessage();
+    }
+  };
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages]);
@@ -1141,19 +1166,47 @@ export default function GroupDetail() {
                               <RoleBadge userId={msg.user_id} />
                             </div>
                           )}
-                          <div className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-2 max-w-full ${isOwn ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-muted rounded-bl-sm'}`}>
-                            <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm sm:text-base leading-relaxed">{msg.content}</p>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <p className="text-[11px] sm:text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
-                            </p>
-                            {isOwn && (
-                              <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => deleteMessage(msg.id)}>
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
+                          {editingMsgId === msg.id ? (
+                            <div className="w-full space-y-2">
+                              <Textarea
+                                value={editingMsgContent}
+                                onChange={(e) => setEditingMsgContent(e.target.value)}
+                                className="min-h-[60px]"
+                              />
+                              <div className="flex items-center gap-2">
+                                <Button size="sm" onClick={saveEditMessage} disabled={savingMsgEdit || !editingMsgContent.trim()}>
+                                  <Check className="h-3 w-3 mr-1" /> Save
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={cancelEditMessage} disabled={savingMsgEdit}>
+                                  <X className="h-3 w-3 mr-1" /> Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-2 max-w-full ${isOwn ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-muted rounded-bl-sm'}`}>
+                              <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm sm:text-base leading-relaxed">{msg.content}</p>
+                              {msg.updated_at && msg.updated_at !== msg.created_at && (
+                                <span className="block text-[10px] opacity-70 mt-1">(edited)</span>
+                              )}
+                            </div>
+                          )}
+                          {editingMsgId !== msg.id && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-[11px] sm:text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                              </p>
+                              {isOwn && (
+                                <>
+                                  <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => startEditMessage(msg)} title="Edit message">
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => deleteMessage(msg.id)} title="Delete message">
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
                         {isOwn && (
                           <span className="relative inline-block shrink-0">
@@ -1183,7 +1236,7 @@ export default function GroupDetail() {
                     }
                   }}
                 />
-                <Button onClick={sendMessage} size="icon" className="shrink-0">
+                <Button onClick={sendMessage} size="icon" className="shrink-0" title="Send message" aria-label="Send message">
                   <Send className="h-4 w-4" />
                 </Button>
               </div>

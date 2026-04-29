@@ -141,7 +141,7 @@ export default function Feed() {
     fetchUserProfile();
 
     const channel = supabase
-      .channel(`feed-posts-${user.id}`)
+      .channel(`feed-realtime-${user.id}`)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'posts' },
@@ -159,6 +159,20 @@ export default function Feed() {
           ));
         }
       )
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
+        fetchPosts();
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'posts' }, (payload) => {
+        const oldId = (payload.old as any)?.id;
+        if (oldId) setPosts((prev) => prev.filter((p) => p.id !== oldId));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reposts' }, () => {
+        fetchReposts();
+        fetchRepostedPosts();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'post_likes' }, () => {
+        fetchLikedPosts();
+      })
       .subscribe();
 
     return () => {
@@ -545,11 +559,22 @@ export default function Feed() {
         </div>
 
         {(() => {
-          // Merge posts and reposts, sorted by date
-          const feedItems: FeedItem[] = [
-            ...posts.map((p) => ({ kind: 'post' as const, sortDate: p.created_at, post: p })),
-            ...reposts.map((r) => ({ kind: 'repost' as const, sortDate: r.created_at, post: r.post, repost: r })),
-          ].sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
+          // Merge posts and reposts, then rank with weighted score:
+          // recency (decays over ~48h) + engagement (likes/comments/reposts) + random jitter.
+          const now = Date.now();
+          const HALF_LIFE_HRS = 12; // recency weight halves every 12h
+          const score = (p: Post, ts: string) => {
+            const ageHrs = Math.max(0, (now - new Date(ts).getTime()) / 3600_000);
+            const recency = Math.pow(0.5, ageHrs / HALF_LIFE_HRS); // 0..1
+            const engagement = (p.likes_count || 0) * 1 + (p.comments_count || 0) * 2 + (p.reposts_count || 0) * 3;
+            const engagementNorm = Math.log1p(engagement) / 4; // dampened
+            const jitter = Math.random() * 0.3;
+            return recency * 1.5 + engagementNorm * 1.0 + jitter;
+          };
+          const feedItems: (FeedItem & { _score: number })[] = [
+            ...posts.map((p) => ({ kind: 'post' as const, sortDate: p.created_at, post: p, _score: score(p, p.created_at) })),
+            ...reposts.map((r) => ({ kind: 'repost' as const, sortDate: r.created_at, post: r.post, repost: r, _score: score(r.post, r.created_at) })),
+          ].sort((a, b) => b._score - a._score);
 
           if (feedItems.length === 0) {
             return (
@@ -624,7 +649,7 @@ export default function Feed() {
                   {item.kind === 'post' && (post.user_id === user?.id || isAdmin) && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" title="Post options" aria-label="Post options">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
