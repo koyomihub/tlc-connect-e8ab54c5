@@ -21,6 +21,7 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
+  KeyRound,
   Globe,
   Users as UsersIcon,
 } from 'lucide-react';
@@ -109,6 +110,10 @@ export default function Profile() {
   const [editContent, setEditContent] = useState('');
   const [editPrivacy, setEditPrivacy] = useState<PostPrivacy>('public');
   const [editSaving, setEditSaving] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   useEffect(() => {
     if (profileId) {
