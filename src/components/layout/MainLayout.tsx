@@ -193,6 +193,8 @@ export function MainLayout({ children }: MainLayoutProps) {
                 size="icon"
                 className="hidden sm:inline-flex"
                 onClick={() => navigate('/admin')}
+                title="Admin"
+                aria-label="Admin"
               >
                 <Shield className="h-5 w-5" />
               </Button>
@@ -203,6 +205,8 @@ export function MainLayout({ children }: MainLayoutProps) {
               size="icon"
               className="hidden sm:inline-flex"
               onClick={() => navigate('/profile')}
+              title="Profile"
+              aria-label="Profile"
             >
               <User className="h-5 w-5" />
             </Button>
@@ -212,6 +216,8 @@ export function MainLayout({ children }: MainLayoutProps) {
               size="icon"
               className="hidden sm:inline-flex"
               onClick={requestLogout}
+              title="Sign out"
+              aria-label="Sign out"
             >
               <LogOut className="h-5 w-5" />
             </Button>
