@@ -58,13 +58,25 @@ serve(async (req) => {
     const userId = claimsData.claims.sub as string;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { walletAddress } = await req.json();
+    const { walletAddress, amount: requestedAmount } = await req.json();
 
     if (!walletAddress || !ethers.isAddress(walletAddress)) {
       return new Response(
         JSON.stringify({ error: 'Invalid wallet address' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Optional explicit amount; if omitted, claim full balance
+    let parsedAmount: number | null = null;
+    if (requestedAmount !== undefined && requestedAmount !== null) {
+      parsedAmount = Number(requestedAmount);
+      if (!Number.isFinite(parsedAmount) || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid claim amount — must be a positive whole number' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Get user's current token balance
