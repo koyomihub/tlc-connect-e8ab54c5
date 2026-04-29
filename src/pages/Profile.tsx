@@ -558,6 +558,17 @@ export default function Profile() {
                     Reposition
                   </button>
                 )}
+                {profile?.cover_photo_url && (
+                  <button
+                    type="button"
+                    onClick={() => removeProfileImage('cover')}
+                    disabled={loading}
+                    className="bg-background/90 backdrop-blur border border-destructive/40 text-destructive rounded-full px-3 py-1.5 text-xs font-medium shadow hover:bg-destructive/10 transition flex items-center gap-1.5"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Remove
+                  </button>
+                )}
                 <input
                   ref={coverInputRef}
                   type="file"
