@@ -222,6 +222,18 @@ export default function Auth() {
       // Reflect the auto-formatted values back into the form so the user sees the result.
       setSignUpData((d) => ({ ...d, firstName, lastName, suffix }));
 
+      // Block duplicate signups: if an account already exists with this email, stop here.
+      const exists = await checkEmailExists(fullEmail);
+      if (exists) {
+        toast({
+          title: 'Email already registered',
+          description: 'An account with this email already exists. Please sign in instead.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+
       await sendOtp(fullEmail, {
         first_name: firstName,
         last_name: lastName,
