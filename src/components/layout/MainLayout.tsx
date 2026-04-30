@@ -85,7 +85,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     { path: '/feed', label: 'Feed', icon: Home, dot: false },
     { path: '/groups', label: 'Groups', icon: Users, dot: hasUnreadGroups },
     { path: '/people', label: 'People', icon: UserPlus, dot: false },
-    { path: '/earn', label: 'Earn', icon: Coins, dot: false },
+    { path: '/token', label: 'Token', icon: Coins, dot: false },
     { path: '/nfts', label: 'NFTs', icon: Gift, dot: false },
     { path: '/organizations', label: 'Organizations', icon: Building2, dot: hasUnreadOrgs },
   ];

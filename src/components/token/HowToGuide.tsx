@@ -102,9 +102,9 @@ export function HowToGuide() {
                 <AccordionContent>
                   <div className="space-y-3 text-sm">
                     <ol className="list-decimal pl-5 space-y-1">
-                      <li>Earn tokens by posting, commenting, receiving likes, joining groups, or claiming your daily login bonus.</li>
-                      <li>On this Earn page, click <strong>"Connect Wallet"</strong> to link your MetaMask wallet.</li>
-                      <li>Once connected, click <strong>"Claim to Wallet"</strong> to mint your earned $TLC tokens directly to your wallet on Polygon Amoy.</li>
+                      <li>Collect tokens by posting, commenting, receiving likes, joining groups, or claiming your daily login bonus.</li>
+                      <li>On the Token page, click <strong>"Connect Wallet"</strong> to link your MetaMask wallet.</li>
+                      <li>Once connected, click <strong>"Claim to Wallet"</strong> to mint your collected $TLC tokens directly to your wallet on Polygon Amoy.</li>
                       <li>Your in-app balance will reset to 0 and the tokens will appear as on-chain $TLC.</li>
                     </ol>
                     <div className="bg-muted p-3 rounded-lg mt-2">

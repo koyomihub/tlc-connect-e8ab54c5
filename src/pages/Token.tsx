@@ -10,10 +10,10 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Coins, TrendingUp, Award, Users, Heart, MessageCircle, Wallet, WalletCards, Unplug } from 'lucide-react';
-import { ClaimHistory } from '@/components/earn/ClaimHistory';
-import { OnChainBalance } from '@/components/earn/OnChainBalance';
+import { ClaimHistory } from '@/components/token/ClaimHistory';
+import { OnChainBalance } from '@/components/token/OnChainBalance';
 
-import { HowToGuide } from '@/components/earn/HowToGuide';
+import { HowToGuide } from '@/components/token/HowToGuide';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
@@ -30,7 +30,7 @@ interface TokenStats {
   rank: number;
 }
 
-export default function Earn() {
+export default function Token() {
   const { user } = useAuth();
   const { account, connectWallet, disconnectWallet, claimTokens, connecting } = useWallet();
   const confirm = useConfirm();
@@ -132,7 +132,7 @@ export default function Earn() {
       }
 
       if (data?.error) {
-        toast({ title: 'Cannot earn tokens', description: data.error, variant: 'destructive' });
+        toast({ title: 'Cannot collect tokens', description: data.error, variant: 'destructive' });
         return null;
       }
 
@@ -166,7 +166,7 @@ export default function Earn() {
 
   const openClaimDialog = () => {
     if (stats.balance === 0) {
-      toast({ title: 'No tokens to claim', description: 'Earn tokens by interacting with posts', variant: 'destructive' });
+      toast({ title: 'No tokens to claim', description: 'Collect tokens by interacting with posts', variant: 'destructive' });
       return;
     }
     setClaimAmountInput(String(stats.balance));
@@ -205,7 +205,7 @@ export default function Earn() {
     { type: 'Get Likes', points: 2, description: 'Receive likes from others (not your own)', icon: Heart },
     { type: 'Comment', points: 3, description: "Engage with others' posts", icon: MessageCircle },
     { type: 'Join Group', points: 5, description: 'Become a member of a group (max 1/week)', icon: Users },
-    { type: 'Daily Login', points: 10, description: 'Log in every day to earn', icon: Award, action: dailyLoginClaimed ? undefined : handleClaimDailyLogin, loading: claimingLogin, claimed: dailyLoginClaimed },
+    { type: 'Daily Login', points: 10, description: 'Log in every day to collect tokens', icon: Award, action: dailyLoginClaimed ? undefined : handleClaimDailyLogin, loading: claimingLogin, claimed: dailyLoginClaimed },
   ];
 
   return (
@@ -214,9 +214,9 @@ export default function Earn() {
         <div>
           <h1 className="text-3xl font-bold flex items-center bg-gradient-primary bg-clip-text text-transparent">
             <Coins className="h-8 w-8 mr-2 text-primary" />
-            Earn TLC Points
+            TLC Token
           </h1>
-          <p className="text-muted-foreground mt-1">Participate in the community and earn TLC points</p>
+          <p className="text-muted-foreground mt-1">Participate in the community and collect TLC points (testnet)</p>
         </div>
 
         {/* Balance Card */}
@@ -276,7 +276,7 @@ export default function Earn() {
               Daily Goal Progress
             </CardTitle>
             <CardDescription>
-              {remaining > 0 ? `Earn ${remaining} more TLC points to hit today's limit` : "You've reached today's 100 TLC points limit!"}
+              {remaining > 0 ? `Collect ${remaining} more TLC points to hit today's limit` : "You've reached today's 100 TLC points limit!"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -292,7 +292,7 @@ export default function Earn() {
 
         {/* Earning Methods */}
         <div>
-          <h2 className="text-2xl font-bold mb-4">Ways to Earn TLC Points</h2>
+          <h2 className="text-2xl font-bold mb-4">Ways to Collect TLC Points</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {activities.map((activity) => {
               const Icon = activity.icon;
@@ -344,10 +344,10 @@ export default function Earn() {
             <CardTitle className="text-primary">Important</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>• Maximum {DAILY_LIMIT} TLC points can be earned per day across all methods</p>
-            <p>• You cannot earn TLC points by liking your own posts</p>
+            <p>• Maximum {DAILY_LIMIT} TLC points can be collected per day across all methods</p>
+            <p>• You cannot collect TLC points by liking your own posts</p>
             <p>• Each like from another user counts only once (no duplicates)</p>
-            <p>• Unliking a post does not reduce your earned TLC points</p>
+            <p>• Unliking a post does not reduce your collected TLC points</p>
             <p>• Connect your wallet to claim your TLC points as $TLC tokens on the blockchain</p>
             <p>• $TLC tokens can be used in the NFTs page to mint exclusive NFTs</p>
           </CardContent>

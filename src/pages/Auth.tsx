@@ -129,13 +129,37 @@ export default function Auth() {
     }
   };
 
+  const checkEmailExists = async (email: string): Promise<boolean> => {
+    // Probe whether an account with this email already exists by trying
+    // to send an OTP without allowing user creation. If the call succeeds,
+    // the user exists. If it returns a "user not found" / "signup disabled"
+    // style error, the user does not exist yet.
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false },
+    });
+    if (!error) return true;
+    const msg = (error.message || '').toLowerCase();
+    if (
+      msg.includes('not found') ||
+      msg.includes('signups not allowed') ||
+      msg.includes('signup is disabled') ||
+      msg.includes('user not found') ||
+      msg.includes('invalid login')
+    ) {
+      return false;
+    }
+    // For other errors (rate limit, network), treat as unknown — let signup proceed.
+    return false;
+  };
+
   const sendOtp = async (email: string, metadata: Record<string, any>) => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         shouldCreateUser: true,
         data: metadata,
-        emailRedirectTo: `${window.location.origin}/`,
+        // Omit emailRedirectTo so the email shows the OTP code rather than a magic link.
       },
     });
     if (error) throw error;
@@ -197,6 +221,18 @@ export default function Auth() {
       const displayName = `${firstName} ${lastName}${suffix ? ' ' + suffix : ''}`;
       // Reflect the auto-formatted values back into the form so the user sees the result.
       setSignUpData((d) => ({ ...d, firstName, lastName, suffix }));
+
+      // Block duplicate signups: if an account already exists with this email, stop here.
+      const exists = await checkEmailExists(fullEmail);
+      if (exists) {
+        toast({
+          title: 'Email already registered',
+          description: 'An account with this email already exists. Please sign in instead.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
 
       await sendOtp(fullEmail, {
         first_name: firstName,
