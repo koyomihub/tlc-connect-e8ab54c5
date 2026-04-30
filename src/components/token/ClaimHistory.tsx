@@ -81,7 +81,7 @@ export function ClaimHistory() {
       <CardContent>
         {claims.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
-            No blockchain claims yet. Earn tokens and claim them to your wallet!
+            No blockchain claims yet. Collect tokens and claim them to your wallet!
           </p>
         ) : (
           <div className="space-y-3">
