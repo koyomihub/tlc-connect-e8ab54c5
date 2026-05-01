@@ -8,6 +8,9 @@ import { useWallet } from '@/contexts/WalletContext';
 
 const AMOY_TX_EXPLORER = 'https://amoy.polygonscan.com/tx/';
 const AMOY_ADDRESS_EXPLORER = 'https://amoy.polygonscan.com/address/';
+// TLC token contract on Polygon Amoy. Used to link to token-transfer history
+// when a row's specific tx hash isn't recorded yet.
+const TLC_TOKEN_ADDRESS = '0xf95368bF95bAB7E83447E249B6C7e53B3bb858b0';
 
 interface ClaimTransaction {
   id: string;
@@ -52,8 +55,27 @@ export function ClaimHistory() {
 
       const { data } = await query;
       if (cancelled) return;
-      setClaims((data as ClaimTransaction[]) || []);
+      const rows = (data as ClaimTransaction[]) || [];
+      setClaims(rows);
       setLoading(false);
+
+      // If any claims are missing a tx hash, trigger a one-time backfill that
+      // resolves them from the on-chain mint events for the TLC contract.
+      if (rows.some((r) => !r.tx_hash)) {
+        try {
+          const { data: result } = await supabase.functions.invoke(
+            'backfill-claim-tx-hashes',
+          );
+          if (!cancelled && result && (result as any).updated > 0) {
+            // Re-fetch to pull in newly-stored tx hashes.
+            const { data: refreshed } = await query;
+            if (!cancelled) setClaims((refreshed as ClaimTransaction[]) || []);
+          }
+        } catch (e) {
+          // Non-fatal: history still renders with fallback links.
+          console.warn('Claim tx-hash backfill failed:', e);
+        }
+      }
     };
 
     fetchClaims();
@@ -177,18 +199,18 @@ export function ClaimHistory() {
                         Tx {shortHash(claim.tx_hash)}
                         <ExternalLink className="h-3 w-3" />
                       </a>
-                    ) : claim.wallet_address || account ? (
+                    ) : (
                       <a
-                        href={`${AMOY_ADDRESS_EXPLORER}${claim.wallet_address || account}`}
+                        href={`${AMOY_ADDRESS_EXPLORER}${TLC_TOKEN_ADDRESS}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-1 mt-0.5"
-                        title="Transaction hash not stored — view wallet on PolygonScan"
+                        title="Transaction hash not yet indexed — view TLC token contract on PolygonScan"
                       >
-                        View on PolygonScan
+                        View TLC token contract
                         <ExternalLink className="h-3 w-3" />
                       </a>
-                    ) : null}
+                    )}
                   </div>
                 </div>
                 <Badge variant="outline" className="text-success border-success/30">
