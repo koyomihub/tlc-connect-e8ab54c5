@@ -939,8 +939,10 @@ export type Database = {
           description: string | null
           id: string
           post_id: string | null
+          tx_hash: string | null
           type: string
           user_id: string
+          wallet_address: string | null
         }
         Insert: {
           amount: number
@@ -948,8 +950,10 @@ export type Database = {
           description?: string | null
           id?: string
           post_id?: string | null
+          tx_hash?: string | null
           type: string
           user_id: string
+          wallet_address?: string | null
         }
         Update: {
           amount?: number
@@ -957,8 +961,10 @@ export type Database = {
           description?: string | null
           id?: string
           post_id?: string | null
+          tx_hash?: string | null
           type?: string
           user_id?: string
+          wallet_address?: string | null
         }
         Relationships: [
           {
