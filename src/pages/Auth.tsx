@@ -1,17 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from '@/components/ui/input-otp';
 import { toast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Mail, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Mail, CheckCircle2 } from 'lucide-react';
 import logo from '@/assets/tlc-connect-logo.png';
 
 interface PasswordInputProps {
@@ -54,11 +49,6 @@ function PasswordInput({ id, value, onChange, placeholder, required, minLength, 
 const SCHOOL_DOMAIN = '@thelewiscollege.edu.ph';
 const SUFFIX_PATTERN = /^[A-Za-z]+\.?$|^(II|III|IV|V|2nd|3rd|4th)$/i;
 
-/**
- * Title-case a name: trim, lowercase, then capitalize the first letter
- * of each space- or hyphen-delimited word. "ALLAN christian" -> "Allan Christian",
- * "dela-cruz" -> "Dela-Cruz".
- */
 function titleCaseName(input: string): string {
   return input
     .trim()
@@ -75,18 +65,16 @@ function titleCaseName(input: string): string {
     .join('');
 }
 
-/** Title-case a suffix but preserve roman numerals (II, III, IV, V) as uppercase. */
 function formatSuffix(input: string): string {
   const trimmed = input.trim();
   if (!trimmed) return '';
   if (/^(ii|iii|iv|v)$/i.test(trimmed)) return trimmed.toUpperCase();
-  // "jr" -> "Jr.", "jr." -> "Jr.", "sr" -> "Sr."
   const cleaned = trimmed.replace(/\.+$/, '');
   const cased = cleaned[0].toUpperCase() + cleaned.slice(1).toLowerCase();
   return cased + '.';
 }
 
-type View = 'signin' | 'signup-form' | 'signup-otp';
+type View = 'signin' | 'signup-form' | 'signup-sent';
 
 export default function Auth() {
   const { signIn } = useAuth();
@@ -107,16 +95,7 @@ export default function Auth() {
   const [showSignUpPw, setShowSignUpPw] = useState(false);
   const [showSignUpConfirmPw, setShowSignUpConfirmPw] = useState(false);
 
-  // OTP state
-  const [otp, setOtp] = useState('');
-  const [otpEmail, setOtpEmail] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(0);
-
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const t = setInterval(() => setResendCooldown((s) => Math.max(0, s - 1)), 1000);
-    return () => clearInterval(t);
-  }, [resendCooldown]);
+  const [sentToEmail, setSentToEmail] = useState('');
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,46 +108,9 @@ export default function Auth() {
     }
   };
 
-  const checkEmailExists = async (email: string): Promise<boolean> => {
-    // Probe whether an account with this email already exists by trying
-    // to send an OTP without allowing user creation. If the call succeeds,
-    // the user exists. If it returns a "user not found" / "signup disabled"
-    // style error, the user does not exist yet.
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: false },
-    });
-    if (!error) return true;
-    const msg = (error.message || '').toLowerCase();
-    if (
-      msg.includes('not found') ||
-      msg.includes('signups not allowed') ||
-      msg.includes('signup is disabled') ||
-      msg.includes('user not found') ||
-      msg.includes('invalid login')
-    ) {
-      return false;
-    }
-    // For other errors (rate limit, network), treat as unknown — let signup proceed.
-    return false;
-  };
-
-  const sendOtp = async (email: string, metadata: Record<string, any>) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: true,
-        data: metadata,
-        // Omit emailRedirectTo so the email shows the OTP code rather than a magic link.
-      },
-    });
-    if (error) throw error;
-  };
-
-  const handleStartSignUp = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Auto-format names
     const firstName = titleCaseName(signUpData.firstName);
     const lastName = titleCaseName(signUpData.lastName);
     const suffix = formatSuffix(signUpData.suffix);
@@ -219,12 +161,28 @@ export default function Auth() {
     setIsLoading(true);
     try {
       const displayName = `${firstName} ${lastName}${suffix ? ' ' + suffix : ''}`;
-      // Reflect the auto-formatted values back into the form so the user sees the result.
       setSignUpData((d) => ({ ...d, firstName, lastName, suffix }));
 
-      // Block duplicate signups: if an account already exists with this email, stop here.
-      const exists = await checkEmailExists(fullEmail);
-      if (exists) {
+      const { data, error } = await supabase.auth.signUp({
+        email: fullEmail,
+        password: signUpData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/feed`,
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            suffix: suffix || null,
+            display_name: displayName,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      // Supabase returns a user with an EMPTY identities array when the email
+      // is already registered (this is its way of signaling duplicate signup
+      // without leaking account existence). Block that case.
+      if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
         toast({
           title: 'Email already registered',
           description: 'An account with this email already exists. Please sign in instead.',
@@ -234,109 +192,23 @@ export default function Auth() {
         return;
       }
 
-      await sendOtp(fullEmail, {
-        first_name: firstName,
-        last_name: lastName,
-        suffix: suffix || null,
-        display_name: displayName,
-        // Stash the password so we can set it after OTP verification creates the user.
-        pending_password: signUpData.password,
-      });
-
-      setOtpEmail(fullEmail);
-      setOtp('');
-      setResendCooldown(60);
-      setView('signup-otp');
-      toast({
-        title: 'Verification code sent',
-        description: `Check ${fullEmail} for a 6-digit code.`,
-      });
+      setSentToEmail(fullEmail);
+      setView('signup-sent');
     } catch (error: any) {
-      toast({
-        title: 'Could not send code',
-        description: error?.message || 'Something went wrong. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (otp.length !== 6) {
-      toast({ title: 'Enter the 6-digit code', variant: 'destructive' });
-      return;
-    }
-    setIsLoading(true);
-    try {
-      // Verify the email OTP — this creates and confirms the user.
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        email: otpEmail,
-        token: otp,
-        type: 'email',
-      });
-      if (verifyError) throw verifyError;
-
-      // The user is now signed in. Set the password they chose so they can
-      // sign in with email + password from now on.
-      if (signUpData.password) {
-        const { error: pwError } = await supabase.auth.updateUser({
-          password: signUpData.password,
+      const msg = (error?.message || '').toLowerCase();
+      if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('user already')) {
+        toast({
+          title: 'Email already registered',
+          description: 'An account with this email already exists. Please sign in instead.',
+          variant: 'destructive',
         });
-        if (pwError) {
-          console.warn('Could not set password after OTP signup:', pwError.message);
-        }
+      } else {
+        toast({
+          title: 'Sign up failed',
+          description: error?.message || 'Something went wrong. Please try again.',
+          variant: 'destructive',
+        });
       }
-
-      // Sign the user out so they explicitly sign in.
-      await supabase.auth.signOut();
-
-      const emailLocal = otpEmail.replace(SCHOOL_DOMAIN, '');
-      toast({
-        title: 'Account verified!',
-        description: 'You can now sign in with your email and password.',
-      });
-
-      setSignInData({ emailLocal, password: '' });
-      setSignUpData({
-        firstName: '',
-        lastName: '',
-        suffix: '',
-        emailLocal: '',
-        password: '',
-        confirmPassword: '',
-      });
-      setOtp('');
-      setOtpEmail('');
-      setView('signin');
-    } catch (error: any) {
-      toast({
-        title: 'Verification failed',
-        description: error?.message || 'The code is invalid or expired.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const resendOtp = async () => {
-    if (resendCooldown > 0 || !otpEmail) return;
-    setIsLoading(true);
-    try {
-      const displayName = `${signUpData.firstName} ${signUpData.lastName}${signUpData.suffix ? ' ' + signUpData.suffix : ''}`;
-      await sendOtp(otpEmail, {
-        first_name: signUpData.firstName,
-        last_name: signUpData.lastName,
-        suffix: signUpData.suffix || null,
-        display_name: displayName,
-        pending_password: signUpData.password,
-      });
-      setResendCooldown(60);
-      toast({ title: 'Code resent', description: `New code sent to ${otpEmail}.` });
-    } catch (error: any) {
-      toast({ title: 'Could not resend', description: error?.message, variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -350,12 +222,12 @@ export default function Auth() {
           <CardTitle className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
             {view === 'signin' && 'Welcome Back'}
             {view === 'signup-form' && 'Create Your Account'}
-            {view === 'signup-otp' && 'Verify Your Email'}
+            {view === 'signup-sent' && 'Check Your Email'}
           </CardTitle>
           <CardDescription>
             {view === 'signin' && 'Sign in to continue to TLC Connect'}
             {view === 'signup-form' && 'Join your school’s social network powered by blockchain'}
-            {view === 'signup-otp' && `Enter the 6-digit code sent to ${otpEmail}`}
+            {view === 'signup-sent' && `We sent a confirmation link to ${sentToEmail}`}
           </CardDescription>
         </CardHeader>
 
@@ -409,7 +281,7 @@ export default function Auth() {
           )}
 
           {view === 'signup-form' && (
-            <form onSubmit={handleStartSignUp} className="space-y-4">
+            <form onSubmit={handleSignUp} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="signup-first">First Name</Label>
@@ -470,7 +342,7 @@ export default function Auth() {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  We’ll send a 6-digit verification code to your school email.
+                  We’ll send a confirmation link to your school email.
                 </p>
               </div>
               <div className="space-y-2">
@@ -501,7 +373,7 @@ export default function Auth() {
               </div>
               <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
                 <Mail className="h-4 w-4 mr-2" />
-                {isLoading ? 'Sending code...' : 'Send Verification Code'}
+                {isLoading ? 'Creating account...' : 'Create Account'}
               </Button>
 
               <p className="text-center text-sm text-muted-foreground pt-2">
@@ -517,46 +389,45 @@ export default function Auth() {
             </form>
           )}
 
-          {view === 'signup-otp' && (
-            <form onSubmit={handleVerifyOtp} className="space-y-5">
-              <div className="flex flex-col items-center space-y-3">
-                <InputOTP maxLength={6} value={otp} onChange={setOtp}>
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-                <p className="text-xs text-muted-foreground text-center">
-                  The code expires in a few minutes. Check your spam folder if it doesn’t arrive.
+          {view === 'signup-sent' && (
+            <div className="space-y-5 text-center">
+              <div className="flex justify-center">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <CheckCircle2 className="h-10 w-10 text-primary" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Click the confirmation link in the email we sent to{' '}
+                  <span className="font-semibold text-foreground">{sentToEmail}</span> to activate
+                  your account. After confirming, you can sign in with your email and password.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Don’t see it? Check your spam folder.
                 </p>
               </div>
-
-              <Button type="submit" className="w-full shadow-md" disabled={isLoading || otp.length !== 6}>
-                {isLoading ? 'Verifying...' : 'Verify & Create Account'}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  const emailLocal = sentToEmail.replace(SCHOOL_DOMAIN, '');
+                  setSignInData({ emailLocal, password: '' });
+                  setSignUpData({
+                    firstName: '',
+                    lastName: '',
+                    suffix: '',
+                    emailLocal: '',
+                    password: '',
+                    confirmPassword: '',
+                  });
+                  setSentToEmail('');
+                  setView('signin');
+                }}
+              >
+                Back to Sign In
               </Button>
-
-              <div className="flex items-center justify-between text-sm">
-                <button
-                  type="button"
-                  onClick={() => setView('signup-form')}
-                  className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                >
-                  <ArrowLeft className="h-3 w-3" /> Edit details
-                </button>
-                <button
-                  type="button"
-                  onClick={resendOtp}
-                  disabled={resendCooldown > 0 || isLoading}
-                  className="font-semibold text-primary disabled:text-muted-foreground hover:underline disabled:no-underline"
-                >
-                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
-                </button>
-              </div>
-            </form>
+            </div>
           )}
         </CardContent>
       </Card>
