@@ -141,12 +141,14 @@ serve(async (req) => {
       console.error('Balance update error (tokens already minted!):', updateError);
     }
 
-    // Record transaction
+    // Record transaction (with on-chain hash + recipient wallet for history filtering)
     await supabase.from('token_transactions').insert({
       user_id: userId,
       amount: -claimAmount,
       type: 'blockchain_claim',
       description: `Claimed ${claimAmount} TLC to wallet ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
+      tx_hash: tx.hash,
+      wallet_address: walletAddress,
     });
 
     return new Response(

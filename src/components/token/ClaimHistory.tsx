@@ -1,54 +1,97 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, ArrowDownToLine, Clock } from 'lucide-react';
+import { ExternalLink, ArrowDownToLine, Clock, Wallet } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWallet } from '@/contexts/WalletContext';
 
-const AMOY_EXPLORER = 'https://amoy.polygonscan.com/tx/';
+const AMOY_TX_EXPLORER = 'https://amoy.polygonscan.com/tx/';
+const AMOY_ADDRESS_EXPLORER = 'https://amoy.polygonscan.com/address/';
 
 interface ClaimTransaction {
   id: string;
   amount: number;
   description: string | null;
   created_at: string | null;
+  tx_hash: string | null;
+  wallet_address: string | null;
 }
 
 export function ClaimHistory() {
   const { user } = useAuth();
+  const { account } = useWallet();
   const [claims, setClaims] = useState<ClaimTransaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
 
     const fetchClaims = async () => {
-      const { data } = await supabase
+      setLoading(true);
+
+      // Base query: this user's blockchain claims
+      let query = supabase
         .from('token_transactions')
-        .select('id, amount, description, created_at')
+        .select('id, amount, description, created_at, tx_hash, wallet_address')
         .eq('user_id', user.id)
         .eq('type', 'blockchain_claim')
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(50);
 
-      setClaims(data || []);
+      // If a wallet is connected, scope to that wallet so the history follows
+      // the connected account. Older claims (no wallet_address column value)
+      // are matched by their description, which embeds the wallet address.
+      if (account) {
+        const short = `${account.slice(0, 6)}...${account.slice(-4)}`;
+        query = query.or(
+          `wallet_address.ilike.${account},description.ilike.%${short}%`,
+        );
+      }
+
+      const { data } = await query;
+      if (cancelled) return;
+      setClaims((data as ClaimTransaction[]) || []);
       setLoading(false);
     };
 
     fetchClaims();
-  }, [user]);
 
-  const extractTxHash = (description: string | null): string | null => {
-    // The description contains wallet info but not tx hash directly.
-    // We'll show what we have.
-    return null;
-  };
+    // Refresh on new claims for this user
+    const channel = supabase
+      .channel(`claim-history-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'token_transactions',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => fetchClaims(),
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [user, account]);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '—';
     const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
+
+  const shortHash = (h: string) => `${h.slice(0, 6)}…${h.slice(-4)}`;
 
   if (loading) {
     return (
@@ -56,7 +99,7 @@ export function ClaimHistory() {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Clock className="h-5 w-5 mr-2 text-primary" />
-            Claim History
+            Blockchain Claim History
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -73,15 +116,37 @@ export function ClaimHistory() {
   return (
     <Card className="shadow-md">
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <Clock className="h-5 w-5 mr-2 text-primary" />
-          Blockchain Claim History
+        <CardTitle className="flex items-center justify-between">
+          <span className="flex items-center">
+            <Clock className="h-5 w-5 mr-2 text-primary" />
+            Blockchain Claim History
+          </span>
+          {account && (
+            <a
+              href={`${AMOY_ADDRESS_EXPLORER}${account}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-normal text-muted-foreground hover:text-primary inline-flex items-center gap-1"
+              title="View this wallet on PolygonScan"
+            >
+              <Wallet className="h-3.5 w-3.5" />
+              {account.slice(0, 6)}…{account.slice(-4)}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {!account && (
+          <p className="text-xs text-muted-foreground mb-3">
+            Connect your wallet to see claims linked to it.
+          </p>
+        )}
         {claims.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
-            No blockchain claims yet. Collect tokens and claim them to your wallet!
+            {account
+              ? 'No blockchain claims for this wallet yet.'
+              : 'No blockchain claims yet. Collect tokens and claim them to your wallet!'}
           </p>
         ) : (
           <div className="space-y-3">
@@ -98,7 +163,32 @@ export function ClaimHistory() {
                     <p className="text-sm font-medium text-foreground">
                       Claimed {Math.abs(claim.amount)} $TLC
                     </p>
-                    <p className="text-xs text-muted-foreground">{formatDate(claim.created_at)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(claim.created_at)}
+                    </p>
+                    {claim.tx_hash ? (
+                      <a
+                        href={`${AMOY_TX_EXPLORER}${claim.tx_hash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-0.5"
+                        title="View transaction on PolygonScan"
+                      >
+                        Tx {shortHash(claim.tx_hash)}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : claim.wallet_address || account ? (
+                      <a
+                        href={`${AMOY_ADDRESS_EXPLORER}${claim.wallet_address || account}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-1 mt-0.5"
+                        title="Transaction hash not stored — view wallet on PolygonScan"
+                      >
+                        View on PolygonScan
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : null}
                   </div>
                 </div>
                 <Badge variant="outline" className="text-success border-success/30">
