@@ -55,8 +55,27 @@ export function ClaimHistory() {
 
       const { data } = await query;
       if (cancelled) return;
-      setClaims((data as ClaimTransaction[]) || []);
+      const rows = (data as ClaimTransaction[]) || [];
+      setClaims(rows);
       setLoading(false);
+
+      // If any claims are missing a tx hash, trigger a one-time backfill that
+      // resolves them from the on-chain mint events for the TLC contract.
+      if (rows.some((r) => !r.tx_hash)) {
+        try {
+          const { data: result } = await supabase.functions.invoke(
+            'backfill-claim-tx-hashes',
+          );
+          if (!cancelled && result && (result as any).updated > 0) {
+            // Re-fetch to pull in newly-stored tx hashes.
+            const { data: refreshed } = await query;
+            if (!cancelled) setClaims((refreshed as ClaimTransaction[]) || []);
+          }
+        } catch (e) {
+          // Non-fatal: history still renders with fallback links.
+          console.warn('Claim tx-hash backfill failed:', e);
+        }
+      }
     };
 
     fetchClaims();
