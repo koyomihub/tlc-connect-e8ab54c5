@@ -8,6 +8,9 @@ import { useWallet } from '@/contexts/WalletContext';
 
 const AMOY_TX_EXPLORER = 'https://amoy.polygonscan.com/tx/';
 const AMOY_ADDRESS_EXPLORER = 'https://amoy.polygonscan.com/address/';
+// TLC token contract on Polygon Amoy. Used to link to token-transfer history
+// when a row's specific tx hash isn't recorded yet.
+const TLC_TOKEN_ADDRESS = '0xf95368bF95bAB7E83447E249B6C7e53B3bb858b0';
 
 interface ClaimTransaction {
   id: string;
