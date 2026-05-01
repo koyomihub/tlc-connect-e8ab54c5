@@ -199,18 +199,18 @@ export function ClaimHistory() {
                         Tx {shortHash(claim.tx_hash)}
                         <ExternalLink className="h-3 w-3" />
                       </a>
-                    ) : claim.wallet_address || account ? (
+                    ) : (
                       <a
-                        href={`${AMOY_ADDRESS_EXPLORER}${claim.wallet_address || account}`}
+                        href={`${AMOY_ADDRESS_EXPLORER}${TLC_TOKEN_ADDRESS}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-1 mt-0.5"
-                        title="Transaction hash not stored — view wallet on PolygonScan"
+                        title="Transaction hash not yet indexed — view TLC token contract on PolygonScan"
                       >
-                        View on PolygonScan
+                        View TLC token contract
                         <ExternalLink className="h-3 w-3" />
                       </a>
-                    ) : null}
+                    )}
                   </div>
                 </div>
                 <Badge variant="outline" className="text-success border-success/30">
