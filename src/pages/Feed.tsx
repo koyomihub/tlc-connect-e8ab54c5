@@ -96,6 +96,9 @@ export default function Feed() {
   const [followingIds, setFollowingIds] = useState<string[]>([]);
   const [reposts, setReposts] = useState<RepostItem[]>([]);
   const [repostPrivacy, setRepostPrivacy] = useState<PostPrivacy>('friends');
+  // Track post IDs the current user just created in this session so they pin to the top
+  // until the page is refreshed (which clears this set and re-randomizes the feed).
+  const myNewPostIdsRef = useRef<string[]>([]);
 
   // Edit/delete state
   const [editingPost, setEditingPost] = useState<Post | null>(null);
@@ -364,6 +367,7 @@ export default function Feed() {
       fetchPosts();
       toast({ title: 'Post created!', description: 'Your post has been shared' });
       if (newPostData?.id) {
+        myNewPostIdsRef.current = [newPostData.id, ...myNewPostIdsRef.current];
         awardTokens({ type: 'post_created', description: 'Created a new post', postId: newPostData.id });
       }
     } catch (error: any) {
@@ -574,10 +578,18 @@ export default function Feed() {
           // Fresh discovery order per page load: every visible post/repost gets
           // an equal random chance, instead of recency/engagement dominating.
           const seed = feedShuffleSeedRef.current;
-          const feedItems: (FeedItem & { _score: number })[] = [
-            ...posts.map((p) => ({ kind: 'post' as const, sortDate: p.created_at, post: p, _score: randomRank(`post-${p.id}`, seed) })),
-            ...reposts.map((r) => ({ kind: 'repost' as const, sortDate: r.created_at, post: r.post, repost: r, _score: randomRank(`repost-${r.id}`, seed) })),
-          ].sort((a, b) => b._score - a._score);
+          const myNewIds = myNewPostIdsRef.current;
+          const newIndex = (id: string) => {
+            const i = myNewIds.indexOf(id);
+            return i === -1 ? Infinity : i;
+          };
+          const feedItems: (FeedItem & { _score: number; _newIdx: number })[] = [
+            ...posts.map((p) => ({ kind: 'post' as const, sortDate: p.created_at, post: p, _score: randomRank(`post-${p.id}`, seed), _newIdx: newIndex(p.id) })),
+            ...reposts.map((r) => ({ kind: 'repost' as const, sortDate: r.created_at, post: r.post, repost: r, _score: randomRank(`repost-${r.id}`, seed), _newIdx: Infinity })),
+          ].sort((a, b) => {
+            if (a._newIdx !== b._newIdx) return a._newIdx - b._newIdx;
+            return b._score - a._score;
+          });
 
           if (feedItems.length === 0) {
             return (
