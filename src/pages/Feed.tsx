@@ -17,6 +17,7 @@ import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
 import { PostPrivacyBadge } from '@/components/feed/PostPrivacyBadge';
 import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
+import { ExpandableText } from '@/components/feed/ExpandableText';
 import {
   DropdownMenu,
   DropdownMenuContent,
