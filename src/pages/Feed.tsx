@@ -96,6 +96,9 @@ export default function Feed() {
   const [followingIds, setFollowingIds] = useState<string[]>([]);
   const [reposts, setReposts] = useState<RepostItem[]>([]);
   const [repostPrivacy, setRepostPrivacy] = useState<PostPrivacy>('friends');
+  // Track post IDs the current user just created in this session so they pin to the top
+  // until the page is refreshed (which clears this set and re-randomizes the feed).
+  const myNewPostIdsRef = useRef<string[]>([]);
 
   // Edit/delete state
   const [editingPost, setEditingPost] = useState<Post | null>(null);
