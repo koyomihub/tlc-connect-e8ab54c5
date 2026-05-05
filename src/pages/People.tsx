@@ -88,33 +88,49 @@ export default function People() {
   const toggleFollow = async (userId: string, currentlyFollowing: boolean) => {
     if (!user) return;
 
+    // Optimistic update — no full refetch, so the page doesn't scroll back to top
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === userId
+          ? {
+              ...u,
+              is_following: !currentlyFollowing,
+              follower_count: Math.max(0, u.follower_count + (currentlyFollowing ? -1 : 1)),
+            }
+          : u,
+      ),
+    );
+
     try {
       if (currentlyFollowing) {
-        await supabase
+        const { error } = await supabase
           .from('follows')
           .delete()
           .eq('follower_id', user.id)
           .eq('following_id', userId);
-
+        if (error) throw error;
         toast({ title: 'Unfollowed user' });
       } else {
-        await supabase
+        const { error } = await supabase
           .from('follows')
-          .insert({
-            follower_id: user.id,
-            following_id: userId,
-          });
-
+          .insert({ follower_id: user.id, following_id: userId });
+        if (error) throw error;
         toast({ title: 'Following user' });
       }
-
-      fetchUsers();
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      // Revert on failure
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === userId
+            ? {
+                ...u,
+                is_following: currentlyFollowing,
+                follower_count: Math.max(0, u.follower_count + (currentlyFollowing ? 1 : -1)),
+              }
+            : u,
+        ),
+      );
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
 
