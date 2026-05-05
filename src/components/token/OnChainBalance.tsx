@@ -3,9 +3,12 @@ import { Coins, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWallet } from '@/contexts/WalletContext';
 import { readTlcBalance } from '@/lib/onChainBalance';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function OnChainBalance() {
   const { account } = useWallet();
+  const { user } = useAuth();
   const [onChainBalance, setOnChainBalance] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -17,9 +20,42 @@ export function OnChainBalance() {
     setLoading(false);
   };
 
+  // Poll a few times after an on-chain change to allow the tx to be mined.
+  const refetchWithRetries = async () => {
+    if (!account) return;
+    const previous = onChainBalance;
+    for (let i = 0; i < 6; i++) {
+      const bal = await readTlcBalance(account);
+      if (bal !== null) setOnChainBalance(bal);
+      if (bal !== null && bal !== previous) break;
+      await new Promise((r) => setTimeout(r, 4000));
+    }
+  };
+
   useEffect(() => {
     fetchOnChainBalance();
   }, [account]);
+
+  // Auto-refresh on new claim transactions for this user
+  useEffect(() => {
+    if (!user || !account) return;
+    const channel = supabase
+      .channel(`onchain-balance-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'token_transactions',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => refetchWithRetries(),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, account]);
 
   if (!account) return null;
 

@@ -96,18 +96,61 @@ export default function NFTs() {
     fetchOwnedNFTs();
   }, [user]);
 
+  const fetchOnChain = async () => {
+    if (!account) {
+      setOnChainBalance(0);
+      return;
+    }
+    const { readTlcBalance } = await import('@/lib/onChainBalance');
+    const bal = await readTlcBalance(account);
+    setOnChainBalance(bal !== null ? parseFloat(bal) : 0);
+  };
+
   useEffect(() => {
-    const fetchOnChain = async () => {
-      if (!account) {
-        setOnChainBalance(0);
-        return;
-      }
-      const { readTlcBalance } = await import('@/lib/onChainBalance');
-      const bal = await readTlcBalance(account);
-      setOnChainBalance(bal !== null ? parseFloat(bal) : 0);
-    };
     fetchOnChain();
   }, [account]);
+
+  // Live updates: when this user gets a new NFT row or a new token tx,
+  // refresh the owned list and on-chain balance (poll a few times so the
+  // freshly-mined tx settles on the RPC).
+  useEffect(() => {
+    if (!user) return;
+
+    const refreshAll = async () => {
+      fetchOwnedNFTs();
+      fetchUserBalance();
+      fetchNFTItems();
+      if (!account) return;
+      const { readTlcBalance } = await import('@/lib/onChainBalance');
+      const previous = onChainBalance;
+      for (let i = 0; i < 6; i++) {
+        const bal = await readTlcBalance(account);
+        if (bal !== null) {
+          const num = parseFloat(bal);
+          setOnChainBalance(num);
+          if (num !== previous) break;
+        }
+        await new Promise((r) => setTimeout(r, 4000));
+      }
+    };
+
+    const channel = supabase
+      .channel(`nft-updates-${user.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'user_nfts',
+        filter: `user_id=eq.${user.id}`,
+      }, () => refreshAll())
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'token_transactions',
+        filter: `user_id=eq.${user.id}`,
+      }, () => refreshAll())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, account]);
+
 
   const fetchNFTItems = async () => {
     const { data } = await supabase
