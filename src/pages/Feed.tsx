@@ -367,6 +367,7 @@ export default function Feed() {
       fetchPosts();
       toast({ title: 'Post created!', description: 'Your post has been shared' });
       if (newPostData?.id) {
+        myNewPostIdsRef.current = [newPostData.id, ...myNewPostIdsRef.current];
         awardTokens({ type: 'post_created', description: 'Created a new post', postId: newPostData.id });
       }
     } catch (error: any) {
