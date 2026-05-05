@@ -17,6 +17,7 @@ import { awardTokens } from '@/lib/awardTokens';
 import { formatDistanceToNow } from 'date-fns';
 import { PostPrivacyBadge } from '@/components/feed/PostPrivacyBadge';
 import { PostImageCarousel } from '@/components/feed/PostImageCarousel';
+import { ExpandableText } from '@/components/feed/ExpandableText';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -687,7 +688,9 @@ export default function Feed() {
                   )}
                 </div>
 
-                <p className="mb-4 whitespace-pre-wrap">{post.content}</p>
+                <div className="mb-4">
+                  <ExpandableText text={post.content} className="whitespace-pre-wrap" />
+                </div>
 
                 {(() => {
                   const imgs = post.image_urls && post.image_urls.length > 0
