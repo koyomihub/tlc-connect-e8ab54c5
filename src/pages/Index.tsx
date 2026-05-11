@@ -71,7 +71,8 @@ export default function Index() {
           </div>
 
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent leading-[1.05] mb-6">
-            Welcome to TLC-Connect
+            <span className="block">Welcome to</span>
+            <span className="block">TLC-Connect</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-10 leading-relaxed">
             The social platform for students, teachers, and organizations of The Lewis College.
