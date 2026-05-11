@@ -125,7 +125,7 @@ export default function Index() {
             <p className="text-white/90 mb-8 max-w-2xl mx-auto">
               Connect your TLC account today and start engaging with thousands of students and educators.
             </p>
-            <Button size="lg" variant="secondary" className="group" onClick={() => navigate("/auth")}>
+            <Button size="lg" variant="secondary" className="group" onClick={() => navigate("/auth?view=signup")}>
               Sign Up Now
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Button>
