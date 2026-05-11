@@ -59,36 +59,29 @@ export default function Index() {
       </div>
 
       {/* Hero */}
-      <section className="container mx-auto px-4 pt-20 pb-24">
-        <div className="text-center space-y-6 max-w-3xl mx-auto">
-          <div className="relative inline-block">
+      <section className="container mx-auto px-4 pt-16 md:pt-24 pb-24">
+        <div className="flex flex-col items-center text-center max-w-3xl mx-auto">
+          <div className="relative mb-8">
             <img
               src={logo}
               alt="TLC-Connect logo"
-              className="w-28 h-28 md:w-32 md:h-32 mx-auto rounded-3xl shadow-glow object-contain"
+              className="w-28 h-28 md:w-32 md:h-32 rounded-3xl shadow-glow object-contain"
             />
-            <span className="absolute inset-0 rounded-3xl ring-1 ring-primary/20" />
+            <span className="absolute inset-0 rounded-3xl ring-1 ring-primary/20 pointer-events-none" />
           </div>
 
-          <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary">
-            <Sparkles className="h-3.5 w-3.5" />
-            Built for The Lewis College community
-          </span>
-
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent leading-[1.05]">
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent leading-[1.05] mb-6">
             Welcome to TLC-Connect
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-10 leading-relaxed">
             The social platform for students, teachers, and organizations of The Lewis College.
             Connect, learn, and explore how blockchain works — together.
           </p>
 
-          <div className="flex items-center justify-center pt-4">
-            <Button size="lg" className="group" onClick={() => navigate("/auth")}>
-              Get Started
-              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </Button>
-          </div>
+          <Button size="lg" className="group" onClick={() => navigate("/auth")}>
+            Get Started
+            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </Button>
         </div>
       </section>
 
