@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Users, MessageSquare, Gift, Award, TrendingUp, Shield } from "lucide-react";
+import { Users, Coins, Image as ImageIcon, TrendingUp, Shield, Sparkles, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/tlc-connect-logo.png";
 
@@ -16,94 +16,128 @@ export default function Index() {
     }
   }, [user, loading, navigate]);
 
+  const features = [
+    {
+      icon: Users,
+      title: "Social Networking",
+      desc: "Connect with peers, join groups, and engage in meaningful discussions.",
+    },
+    {
+      icon: Coins,
+      title: "Tokens",
+      desc: "Earn $TLC test tokens for participation and claim them straight to your wallet.",
+    },
+    {
+      icon: ImageIcon,
+      title: "NFTs",
+      desc: "Spend your earned tokens to mint exclusive NFTs and digital collectibles.",
+    },
+    {
+      icon: TrendingUp,
+      title: "Blockchain Integration",
+      desc: "Connect your Web3 wallet and experience true digital ownership on Polygon.",
+    },
+    {
+      icon: Shield,
+      title: "Secure & Private",
+      desc: "Your data is protected with enterprise-grade security and encryption.",
+    },
+    {
+      icon: Sparkles,
+      title: "Learn by Doing",
+      desc: "Explore how Web3 works through real, hands-on interactions inside your school.",
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-accent/20 to-background">
-      {/* Hero Section */}
-      <div className="container mx-auto px-4 py-20">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Decorative background */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-32 -left-32 h-[28rem] w-[28rem] rounded-full bg-primary/20 blur-3xl" />
+        <div className="absolute top-1/3 -right-32 h-[28rem] w-[28rem] rounded-full bg-accent/40 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-[24rem] w-[24rem] rounded-full bg-primary/10 blur-3xl" />
+      </div>
+
+      {/* Hero */}
+      <section className="container mx-auto px-4 pt-20 pb-24">
         <div className="text-center space-y-6 max-w-3xl mx-auto">
-          <img src={logo} alt="TLC-Connect logo" className="w-32 h-32 mx-auto rounded-3xl shadow-glow object-contain" />
-          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+          <div className="relative inline-block">
+            <img
+              src={logo}
+              alt="TLC-Connect logo"
+              className="w-28 h-28 md:w-32 md:h-32 mx-auto rounded-3xl shadow-glow object-contain"
+            />
+            <span className="absolute inset-0 rounded-3xl ring-1 ring-primary/20" />
+          </div>
+
+          <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary">
+            <Sparkles className="h-3.5 w-3.5" />
+            Built for The Lewis College community
+          </span>
+
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent leading-[1.05]">
             Welcome to TLC-Connect
           </h1>
-          <p className="text-xl text-muted-foreground">
-            The social platform for students, teachers, and organizations of The Lewis College. Connect, learn, and
-            explore how blockchain works together.
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+            The social platform for students, teachers, and organizations of The Lewis College.
+            Connect, learn, and explore how blockchain works — together.
           </p>
-          <div className="flex items-center justify-center space-x-4 pt-6">
-            <Button size="lg" onClick={() => navigate("/auth")}>
+
+          <div className="flex items-center justify-center pt-4">
+            <Button size="lg" className="group" onClick={() => navigate("/auth")}>
               Get Started
-            </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate("/auth")}>
-              Learn More
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Button>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Features Grid */}
-      <div className="container mx-auto px-4 py-16">
-        <h2 className="text-3xl font-bold text-center mb-12">Platform Features</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          <Card className="p-6 space-y-4 hover:shadow-elegant transition-shadow">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Users className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold">Social Networking</h3>
-            <p className="text-muted-foreground">
-              Connect with peers, join groups, and engage in meaningful discussions.
-            </p>
-          </Card>
-
-          <Card className="p-6 space-y-4 hover:shadow-elegant transition-shadow">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Gift className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold">NFTs</h3>
-            <p className="text-muted-foreground">Earn test tokens for participation and burn them to mint exclusive NFTs.</p>
-          </Card>
-
-          <Card className="p-6 space-y-4 hover:shadow-elegant transition-shadow">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Award className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold">NFT Marketplace</h3>
-            <p className="text-muted-foreground">
-              Get exclusive NFTs and digital collectibles with your earned test tokens.
-            </p>
-          </Card>
-
-          <Card className="p-6 space-y-4 hover:shadow-elegant transition-shadow">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-              <TrendingUp className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold">Blockchain Integration</h3>
-            <p className="text-muted-foreground">Connect your Web3 wallet and experience true digital ownership.</p>
-          </Card>
-
-          <Card className="p-6 space-y-4 hover:shadow-elegant transition-shadow">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Shield className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold">Secure & Private</h3>
-            <p className="text-muted-foreground">
-              Your data is protected with enterprise-grade security and encryption.
-            </p>
-          </Card>
-        </div>
-      </div>
-
-      {/* CTA Section */}
-      <div className="container mx-auto px-4 py-16">
-        <Card className="p-12 text-center bg-gradient-primary">
-          <h2 className="text-3xl font-bold text-white mb-4">Ready to Join the Community?</h2>
-          <p className="text-white/90 mb-8 max-w-2xl mx-auto">
-            Connect your TLC account today and start connecting with thousands of students and educators.
+      {/* Features */}
+      <section className="container mx-auto px-4 pb-20">
+        <div className="text-center mb-12 space-y-3">
+          <h2 className="text-3xl md:text-4xl font-bold">Platform Features</h2>
+          <p className="text-muted-foreground max-w-xl mx-auto">
+            Everything you need to socialize, earn, and explore Web3 — all in one place.
           </p>
-          <Button size="lg" variant="secondary" onClick={() => navigate("/auth")}>
-            Sign Up Now
-          </Button>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          {features.map(({ icon: Icon, title, desc }) => (
+            <Card
+              key={title}
+              className="group p-6 space-y-4 border-border/60 bg-card/60 backdrop-blur hover:shadow-elegant hover:-translate-y-1 hover:border-primary/30 transition-all duration-300"
+            >
+              <div className="h-12 w-12 rounded-xl bg-gradient-primary/10 bg-primary/10 flex items-center justify-center ring-1 ring-primary/15 group-hover:scale-110 transition-transform">
+                <Icon className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold">{title}</h3>
+              <p className="text-muted-foreground leading-relaxed">{desc}</p>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="container mx-auto px-4 pb-20">
+        <Card className="relative overflow-hidden p-10 md:p-14 text-center bg-gradient-primary border-0">
+          <div className="pointer-events-none absolute inset-0 opacity-20">
+            <div className="absolute -top-16 -left-16 h-64 w-64 rounded-full bg-white blur-3xl" />
+            <div className="absolute -bottom-16 -right-16 h-64 w-64 rounded-full bg-white blur-3xl" />
+          </div>
+          <div className="relative">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Ready to Join the Community?
+            </h2>
+            <p className="text-white/90 mb-8 max-w-2xl mx-auto">
+              Connect your TLC account today and start engaging with thousands of students and educators.
+            </p>
+            <Button size="lg" variant="secondary" className="group" onClick={() => navigate("/auth")}>
+              Sign Up Now
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Button>
+          </div>
         </Card>
-      </div>
+      </section>
     </div>
   );
 }
