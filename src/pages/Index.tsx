@@ -71,7 +71,8 @@ export default function Index() {
           </div>
 
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent leading-[1.05] mb-6">
-            Welcome to TLC-Connect
+            <span className="block">Welcome to</span>
+            <span className="block">TLC-Connect</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-10 leading-relaxed">
             The social platform for students, teachers, and organizations of The Lewis College.
@@ -124,7 +125,7 @@ export default function Index() {
             <p className="text-white/90 mb-8 max-w-2xl mx-auto">
               Connect your TLC account today and start engaging with thousands of students and educators.
             </p>
-            <Button size="lg" variant="secondary" className="group" onClick={() => navigate("/auth")}>
+            <Button size="lg" variant="secondary" className="group" onClick={() => navigate("/auth?view=signup")}>
               Sign Up Now
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Button>

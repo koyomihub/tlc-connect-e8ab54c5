@@ -79,7 +79,11 @@ type View = 'signin' | 'signup-form' | 'signup-sent';
 export default function Auth() {
   const { signIn } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [view, setView] = useState<View>('signin');
+  const initialView: View =
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('view') === 'signup'
+      ? 'signup-form'
+      : 'signin';
+  const [view, setView] = useState<View>(initialView);
 
   const [signInData, setSignInData] = useState({ emailLocal: '', password: '' });
   const [signUpData, setSignUpData] = useState({
